@@ -34,7 +34,8 @@ import {
   Plus, 
   Upload, 
   Save, 
-  Tag 
+  Tag,
+  Image
 } from "lucide-react"
 import Link from "next/link"
 
@@ -77,8 +78,8 @@ export default function AddProductPage() {
     { id: 3, name: "Unisex", value: "unisex" }
   ]
 
-// Update your useState call to include images array
-const [formData, setFormData] = useState<{
+  // Update formData structure to include color-specific images
+  const [formData, setFormData] = useState<{
     title: string;
     description: string;
     category: string;
@@ -89,7 +90,7 @@ const [formData, setFormData] = useState<{
     colors: string[];
     selectedSizes: string[];
     inventory: Record<string, number>;
-    images: Array<{url: string, file: File, name: string}>;  // Add this line
+    colorImages: Record<string, Array<{url: string, file: File, name: string}>>;
   }>({
     title: "",
     description: "",
@@ -101,7 +102,7 @@ const [formData, setFormData] = useState<{
     colors: [],
     selectedSizes: [],
     inventory: {},
-    images: []  // Add this line
+    colorImages: {}
   })
 
   // State for color and size selection
@@ -109,14 +110,18 @@ const [formData, setFormData] = useState<{
   const [selectedSize, setSelectedSize] = useState("")
   const [sizeQuantity, setSizeQuantity] = useState("")
   const [customColor, setCustomColor] = useState("");
-
+  const [activeColorForImages, setActiveColorForImages] = useState<string | null>(null);
 
   // Handle color selection
   const addColor = () => {
     if (selectedColor && !formData.colors.includes(selectedColor)) {
       setFormData({
         ...formData,
-        colors: [...formData.colors, selectedColor]
+        colors: [...formData.colors, selectedColor],
+        colorImages: {
+          ...formData.colorImages,
+          [selectedColor]: [] // Initialize empty images array for the new color
+        }
       })
       setSelectedColor("")
     }
@@ -126,7 +131,11 @@ const [formData, setFormData] = useState<{
     if (color && !formData.colors.includes(color)) {
       setFormData({
         ...formData,
-        colors: [...formData.colors, color]
+        colors: [...formData.colors, color],
+        colorImages: {
+          ...formData.colorImages,
+          [color]: [] // Initialize empty images array for the new color
+        }
       });
       setCustomColor("");
       setSelectedColor("");
@@ -134,12 +143,22 @@ const [formData, setFormData] = useState<{
   };
 
   // Remove a color
-const removeColor = (color: string) => {
+  const removeColor = (color: string) => {
+    const newColors = formData.colors.filter((c: string) => c !== color);
+    const newColorImages = { ...formData.colorImages };
+    delete newColorImages[color];
+    
     setFormData({
-        ...formData,
-        colors: formData.colors.filter((c: string) => c !== color)
-    })
-}
+      ...formData,
+      colors: newColors,
+      colorImages: newColorImages
+    });
+    
+    // If we're removing the active color, reset the activeColorForImages
+    if (activeColorForImages === color) {
+      setActiveColorForImages(null);
+    }
+  }
 
   // Handle size inventory
   const addSizeInventory = () => {
@@ -158,22 +177,23 @@ const removeColor = (color: string) => {
   }
 
   // Remove a size
-const removeSize = (size: string) => {
+  const removeSize = (size: string) => {
     const newSizes = formData.selectedSizes.filter((s: string) => s !== size)
     const newInventory: Record<string, number> = { ...formData.inventory }
     delete newInventory[size]
     
     setFormData({
-        ...formData,
-        selectedSizes: newSizes,
-        inventory: newInventory
+      ...formData,
+      selectedSizes: newSizes,
+      inventory: newInventory
     })
-}
-    // Handle image upload
-const handleImageUpload = (e: ChangeEvent<HTMLInputElement>) => {
+  }
+
+  // Handle image upload for a specific color
+  const handleImageUpload = (e: ChangeEvent<HTMLInputElement>, color: string) => {
     const files = e.target.files;
     
-    if (!files || formData.images.length >= 5) return;
+    if (!files || (formData.colorImages[color] && formData.colorImages[color].length >= 5)) return;
     
     const newImages = Array.from(files).map(file => ({
       url: URL.createObjectURL(file),
@@ -182,30 +202,38 @@ const handleImageUpload = (e: ChangeEvent<HTMLInputElement>) => {
     }));
     
     // Calculate how many more images we can add before hitting the limit
-    const remainingSlots = 5 - formData.images.length;
+    const currentImages = formData.colorImages[color] || [];
+    const remainingSlots = 5 - currentImages.length;
     const imagesToAdd = newImages.slice(0, remainingSlots);
     
     setFormData({
       ...formData,
-      images: [...formData.images, ...imagesToAdd]
+      colorImages: {
+        ...formData.colorImages,
+        [color]: [...currentImages, ...imagesToAdd]
+      }
     });
     
     // Reset the input
     e.target.value = '';
   };
   
-  // Remove image function
-  const removeImage = (index: number) => {
-    const updatedImages = [...formData.images];
+  // Remove image for a specific color
+  const removeImage = (color: string, index: number) => {
+    const updatedColorImages = { ...formData.colorImages };
+    const updatedImages = [...updatedColorImages[color]];
     updatedImages.splice(index, 1);
+    
+    updatedColorImages[color] = updatedImages;
+    
     setFormData({
       ...formData,
-      images: updatedImages
+      colorImages: updatedColorImages
     });
   };
 
-// Handle input changes
-const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+  // Handle input changes
+  const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setFormData({
       ...formData,
@@ -214,15 +242,15 @@ const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HT
   };
 
   // Handle select changes
-const handleSelectChange = (name: keyof typeof formData, value: string) => {
+  const handleSelectChange = (name: keyof typeof formData, value: string) => {
     setFormData({
-        ...formData,
-        [name]: value
+      ...formData,
+      [name]: value
     })
-}
+  }
 
-// Handle form submission
-const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+  // Handle form submission
+  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     console.log("Form submitted:", formData);
     // Add API call to save product here
@@ -249,17 +277,16 @@ const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
           <h1 className="text-2xl font-bold">Add New Product</h1>
         </div>
         <Button onClick={handleButtonClick} className="flex items-center">
-        <Save className="h-4 w-4 mr-2" />
+          <Save className="h-4 w-4 mr-2" />
           Save Product
         </Button>
       </div>
 
       <form onSubmit={handleSubmit}>
         <Tabs defaultValue="details" className="w-full">
-          <TabsList className="grid grid-cols-3 mb-6">
+          <TabsList className="grid grid-cols-2 mb-6">
             <TabsTrigger value="details">Product Details</TabsTrigger>
-            <TabsTrigger value="variants">Colors & Sizes</TabsTrigger>
-            <TabsTrigger value="images">Images & Media</TabsTrigger>
+            <TabsTrigger value="variants">Colors, Sizes & Images</TabsTrigger>
           </TabsList>
 
           {/* Product Details Tab */}
@@ -361,120 +388,212 @@ const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
                     </Select>
                   </div>
                 </div>
-
-                {/* <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="discountPrice">Discount Price (Optional)</Label>
-                    <Input 
-                      id="discountPrice" 
-                      name="discountPrice" 
-                      type="number"
-                      placeholder="0.00" 
-                      value={formData.discountPrice}
-                      onChange={handleChange}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label>SKU / Product Code</Label>
-                    <div className="flex">
-                      <Input 
-                        placeholder="Auto-generated" 
-                        disabled 
-                        className="bg-gray-800"
-                      />
-                      <Button variant="ghost" type="button" className="ml-2">
-                        <Tag className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-                </div> */}
               </div>
             </Card>
           </TabsContent>
 
-          {/* Colors & Sizes Tab */}
+          {/* Colors, Sizes & Images Tab */}
           <TabsContent value="variants" className="space-y-6">
             <Card className="p-6">
-                <h3 className="text-lg font-medium mb-4">Available Colors</h3>
-                <div className="space-y-4">
+              <h3 className="text-lg font-medium mb-4">Available Colors</h3>
+              <div className="space-y-4">
                 <div className="flex items-end gap-2">
-                    <div className="flex-1">
+                  <div className="flex-1">
                     <Label htmlFor="color">Add Color</Label>
                     <div className="flex gap-2">
-                        <Select 
+                      <Select 
                         onValueChange={(value) => {
-                            setSelectedColor(value);
-                            if (value !== "custom") {
+                          setSelectedColor(value);
+                          if (value !== "custom") {
                             // If a preset color is selected, clear any custom color
                             setCustomColor("");
-                            }
+                          }
                         }}
                         value={selectedColor}
-                        >
+                      >
                         <SelectTrigger>
-                            <SelectValue placeholder="Select color" />
+                          <SelectValue placeholder="Select color" />
                         </SelectTrigger>
                         <SelectContent>
-                            {availableColors.map(color => (
+                          {availableColors.map(color => (
                             <SelectItem key={color.id} value={color.value}>
-                                {color.name}
+                              {color.name}
                             </SelectItem>
-                            ))}
-                            <SelectItem value="custom">Custom color</SelectItem>
+                          ))}
+                          <SelectItem value="custom">Custom color</SelectItem>
                         </SelectContent>
-                        </Select>
-                        {selectedColor === "custom" && (
+                      </Select>
+                      {selectedColor === "custom" && (
                         <Input 
-                            placeholder="Enter color name" 
-                            value={customColor}
-                            onChange={(e) => setCustomColor(e.target.value)}
-                            className="w-1/2"
+                          placeholder="Enter color name" 
+                          value={customColor}
+                          onChange={(e) => setCustomColor(e.target.value)}
+                          className="w-1/2"
                         />
-                        )}
+                      )}
                     </div>
-                    </div>
-                    <Button 
+                  </div>
+                  <Button 
                     type="button" 
                     onClick={() => {
-                        if (selectedColor === "custom" && customColor.trim()) {
+                      if (selectedColor === "custom" && customColor.trim()) {
                         // Add custom color
                         addCustomColor(customColor.trim());
-                        } else if (selectedColor && selectedColor !== "custom") {
+                      } else if (selectedColor && selectedColor !== "custom") {
                         // Add preset color
                         addColor();
-                        }
+                      }
                     }}
-                    >
+                  >
                     <Plus className="h-4 w-4 mr-2" />
                     Add
-                    </Button>
+                  </Button>
                 </div>
 
                 {formData.colors.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mt-4">
+                  <div className="flex flex-wrap gap-2 mt-4">
                     {formData.colors.map(color => {
-                        const colorObj = availableColors.find(c => c.value === color) || { name: color, value: color };
-                        return (
+                      const colorObj = availableColors.find(c => c.value === color) || { name: color, value: color };
+                      const isActive = activeColorForImages === color;
+                      
+                      return (
                         <div 
-                            key={color} 
-                            className="flex items-center bg-gray-800 rounded-full px-3 py-1"
+                          key={color} 
+                          className={`flex items-center rounded-full px-3 py-1 cursor-pointer ${isActive ? 'bg-blue-800' : 'bg-gray-800'}`}
+                          onClick={() => setActiveColorForImages(color)}
                         >
-                            <span className="mr-2">{colorObj.name}</span>
-                            <Button 
+                          <span className="mr-2">{colorObj.name}</span>
+                          <Button 
                             type="button" 
                             variant="ghost" 
                             size="sm" 
                             className="h-5 w-5 p-0 rounded-full"
-                            onClick={() => removeColor(color)}
-                            >
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              removeColor(color);
+                            }}
+                          >
                             <X className="h-3 w-3" />
-                            </Button>
+                          </Button>
                         </div>
-                        )
+                      );
                     })}
-                    </div>
+                  </div>
                 )}
+              </div>
+
+              {activeColorForImages && (
+                <div className="mt-6">
+                  <div className="flex items-center">
+                    <h4 className="text-md font-medium">Images for {(availableColors.find(c => c.value === activeColorForImages) || { name: activeColorForImages }).name}</h4>
+                    <div className="ml-2 inline-block w-4 h-4 rounded-full" style={{ backgroundColor: activeColorForImages }}></div>
+                  </div>
+                  
+                  {/* Image upload zone for selected color */}
+                  <div 
+                    className="border-2 border-dashed border-gray-700 rounded-lg p-6 flex flex-col items-center justify-center text-center h-48 my-4"
+                    onDragOver={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      e.currentTarget.classList.add("border-blue-500");
+                    }}
+                    onDragLeave={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      e.currentTarget.classList.remove("border-blue-500");
+                    }}
+                    onDrop={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      e.currentTarget.classList.remove("border-blue-500");
+                      
+                      const currentImages = formData.colorImages[activeColorForImages] || [];
+                      if (currentImages.length >= 5) return;
+                      
+                      const files = e.dataTransfer.files;
+                      if (files.length === 0) return;
+                      
+                      // Filter for only image files
+                      const imageFiles = Array.from(files).filter(file => 
+                        file.type.startsWith('image/')
+                      );
+                      
+                      if (imageFiles.length === 0) return;
+                      
+                      // Process the dropped image files
+                      const newImages = imageFiles.map(file => ({
+                        url: URL.createObjectURL(file),
+                        file: file,
+                        name: file.name
+                      }));
+                      
+                      // Calculate how many more images we can add before hitting the limit
+                      const remainingSlots = 5 - currentImages.length;
+                      const imagesToAdd = newImages.slice(0, remainingSlots);
+                      
+                      setFormData({
+                        ...formData,
+                        colorImages: {
+                          ...formData.colorImages,
+                          [activeColorForImages]: [...currentImages, ...imagesToAdd]
+                        }
+                      });
+                    }}
+                  >
+                    <input
+                      type="file"
+                      id={`image-upload-${activeColorForImages}`}
+                      className="hidden"
+                      accept="image/png, image/jpeg"
+                      onChange={(e) => handleImageUpload(e, activeColorForImages)}
+                      multiple
+                      disabled={(formData.colorImages[activeColorForImages] || []).length >= 5}
+                    />
+                    <Upload className="h-8 w-8 mb-2 text-gray-500" />
+                    <p className="text-sm font-medium mb-1">Drop your images for {(availableColors.find(c => c.value === activeColorForImages) || { name: activeColorForImages }).name} here</p>
+                    <p className="text-xs text-gray-500 mb-3">PNG, JPG up to 5MB (max 5 images per color)</p>
+                    <Button 
+                      type="button" 
+                      size="sm" 
+                      variant="outline" 
+                      onClick={() => document.getElementById(`image-upload-${activeColorForImages}`)?.click()}
+                      disabled={(formData.colorImages[activeColorForImages] || []).length >= 5}
+                    >
+                      <Image className="h-4 w-4 mr-2" />
+                      Select Files
+                    </Button>
+                    {(formData.colorImages[activeColorForImages] || []).length >= 5 && (
+                      <p className="text-xs text-amber-500 mt-2">Maximum 5 images allowed per color</p>
+                    )}
+                  </div>
+                  
+                  {/* Display uploaded images for active color */}
+                  {formData.colorImages[activeColorForImages] && formData.colorImages[activeColorForImages].length > 0 && (
+                    <div className="mt-4">
+                      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                        {formData.colorImages[activeColorForImages].map((image, index) => (
+                          <div key={index} className="relative">
+                            <img 
+                              src={image.url} 
+                              alt={`${activeColorForImages} image ${index + 1}`} 
+                              className="w-full h-40 object-cover rounded-md"
+                            />
+                            <Button
+                              type="button"
+                              variant="destructive"
+                              size="sm"
+                              className="absolute top-2 right-2 h-6 w-6 p-0 rounded-full"
+                              onClick={() => removeImage(activeColorForImages, index)}
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
+              )}
 
               <div className="border-t border-gray-800 my-6"></div>
 
@@ -551,114 +670,7 @@ const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
               </div>
             </Card>
           </TabsContent>
-
-            {/* Images Tab */}
-            <TabsContent value="images" className="space-y-6">
-            <Card className="p-6">
-                <h3 className="text-lg font-medium mb-4">Product Images</h3>
-                
-                {/* Image upload zone with drag and drop */}
-                <div 
-                className="border-2 border-dashed border-gray-700 rounded-lg p-6 flex flex-col items-center justify-center text-center h-48 mb-6"
-                onDragOver={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    e.currentTarget.classList.add("border-blue-500");
-                }}
-                onDragLeave={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    e.currentTarget.classList.remove("border-blue-500");
-                }}
-                onDrop={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    e.currentTarget.classList.remove("border-blue-500");
-                    
-                    if (formData.images.length >= 5) return;
-                    
-                    const files = e.dataTransfer.files;
-                    if (files.length === 0) return;
-                    
-                    // Filter for only image files
-                    const imageFiles = Array.from(files).filter(file => 
-                    file.type.startsWith('image/')
-                    );
-                    
-                    if (imageFiles.length === 0) return;
-                    
-                    // Process the dropped image files
-                    const newImages = imageFiles.map(file => ({
-                    url: URL.createObjectURL(file),
-                    file: file,
-                    name: file.name
-                    }));
-                    
-                    // Calculate how many more images we can add before hitting the limit
-                    const remainingSlots = 5 - formData.images.length;
-                    const imagesToAdd = newImages.slice(0, remainingSlots);
-                    
-                    setFormData({
-                    ...formData,
-                    images: [...formData.images, ...imagesToAdd]
-                    });
-                }}
-                >
-                <input
-                    type="file"
-                    id="image-upload"
-                    className="hidden"
-                    accept="image/png, image/jpeg"
-                    onChange={handleImageUpload}
-                    multiple
-                    disabled={formData.images.length >= 5}
-                />
-                <Upload className="h-8 w-8 mb-2 text-gray-500" />
-                <p className="text-sm font-medium mb-1">Drop your image here</p>
-                <p className="text-xs text-gray-500 mb-3">PNG, JPG up to 5MB (max 5 images)</p>
-                <Button 
-                    type="button" 
-                    size="sm" 
-                    variant="outline" 
-                    onClick={() => document.getElementById('image-upload')?.click()}
-                    disabled={formData.images.length >= 5}
-                >
-                    Select Files
-                </Button>
-                {formData.images.length >= 5 && (
-                    <p className="text-xs text-amber-500 mt-2">Maximum 5 images allowed</p>
-                )}
-                </div>
-                
-                {/* Display uploaded images */}
-                {formData.images.length > 0 && (
-                <div>
-                    <h4 className="text-sm font-medium mb-3">Uploaded Images</h4>
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                    {formData.images.map((image, index) => (
-                        <div key={index} className="relative">
-                        <img 
-                            src={image.url} 
-                            alt={`Product image ${index + 1}`} 
-                            className="w-full h-40 object-cover rounded-md"
-                        />
-                        <Button
-                            type="button"
-                            variant="destructive"
-                            size="sm"
-                            className="absolute top-2 right-2 h-6 w-6 p-0 rounded-full"
-                            onClick={() => removeImage(index)}
-                        >
-                            <X className="h-3 w-3" />
-                        </Button>
-                        </div>
-                    ))}
-                    </div>
-                </div>
-                )}
-            </Card>
-            </TabsContent>
-            </Tabs>
+        </Tabs>
 
         <div className="mt-6 flex items-center justify-end gap-4">
           <Button type="button" variant="outline">Cancel</Button>
