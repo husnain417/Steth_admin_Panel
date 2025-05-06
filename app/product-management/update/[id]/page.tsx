@@ -36,7 +36,7 @@ import {
   Loader2
 } from "lucide-react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { useRouter, useParams } from "next/navigation"
 
 // Define types for our form data and related objects
 type Color = {
@@ -82,6 +82,7 @@ type FormData = {
   category: string;
   customCategory: string;
   gender: string;
+  customGender: string;
   material: string;
   customMaterial: string;
   price: string;
@@ -90,7 +91,10 @@ type FormData = {
   colorSizeInventory: InventoryItem[];
 }
 
-export default function AddProductPage() {
+export default function UpdateProductPage() {
+  const params = useParams();
+  const productId = params?.id as string;
+
   // Available options for dropdowns
   const availableColors: Color[] = [
     { id: 1, name: "Black", value: "Black", code: "#000000" },
@@ -101,34 +105,32 @@ export default function AddProductPage() {
   ]
 
   const availableSizes: Size[] = [
-    { id: 1, name: "XS", value: "XS" },
-    { id: 2, name: "S", value: "S" },
-    { id: 3, name: "M", value: "M" },
-    { id: 4, name: "L", value: "L" },
-    { id: 5, name: "XL", value: "XL" },
-    { id: 6, name: "XXL", value: "XXL" }
+    { id: 1, name: "XS", value: "xs" },
+    { id: 2, name: "S", value: "s" },
+    { id: 3, name: "M", value: "m" },
+    { id: 4, name: "L", value: "l" },
+    { id: 5, name: "XL", value: "xl" },
+    { id: 6, name: "XXL", value: "xxl" }
   ]
 
   const categories: Category[] = [
-    { id: 1, name: "Scrubs", value: "Scrubs" },
-    { id: 2, name: "Masks", value: "Masks" },
-    { id: 3, name: "Caps", value: "Caps" }
+    { id: 1, name: "Scrubs", value: "scrubs" },
+    { id: 2, name: "Masks", value: "masks" },
+    { id: 3, name: "Caps", value: "caps" }
   ]
 
   const materials: Material[] = [
-    { id: 1, name: "Cotton", value: "Cotton" },
-    { id: 2, name: "Polyester", value: "Polyester" },
-    { id: 3, name: "Cotton Blend", value: "Cotton Blend" },
-    { id: 4, name: "Spandex", value: "Spandex" }
+    { id: 1, name: "Cotton", value: "cotton" },
+    { id: 2, name: "Polyester", value: "polyester" },
+    { id: 3, name: "Cotton Blend", value: "cotton-blend" },
+    { id: 4, name: "Spandex", value: "spandex" }
   ]
 
   const genders: Gender[] = [
-    { id: 1, name: "Men", value: "Men" },
-    { id: 2, name: "Women", value: "Women" },
-    { id: 3, name: "Unisex", value: "Unisex" }
+    { id: 1, name: "Men", value: "men" },
+    { id: 2, name: "Women", value: "women" },
+    { id: 3, name: "Unisex", value: "unisex" }
   ]
-  
-  
 
   // Form data state
   const [formData, setFormData] = useState<FormData>({
@@ -137,6 +139,7 @@ export default function AddProductPage() {
     category: "",
     customCategory: "",
     gender: "",
+    customGender: "",
     material: "",
     customMaterial: "",
     price: "",
@@ -154,172 +157,74 @@ export default function AddProductPage() {
   const [isFormValid, setIsFormValid] = useState<boolean>(false);
   const [selectedInventoryColor, setSelectedInventoryColor] = useState<string>("")
   const [responseMessage, setResponseMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(false);
+  const [loading, setLoading] = useState(true);
+  const [newlyAddedColors, setNewlyAddedColors] = useState<string[]>([]);
 
   const router = useRouter();
 
-  // Reset form data
-  const resetFormData = () => {
-    setFormData({
-      title: "",
-      description: "",
-      category: "",
-      customCategory: "",
-      gender: "",
-      material: "",
-      customMaterial: "",
-      price: "",
-      colors: [],
-      selectedSizes: [],
-      colorSizeInventory: []
-    });
-    setSelectedColor("");
-    setSelectedSize("");
-    setSizeQuantity("");
-    setCustomColor("");
-    setColorCode("");
-    setSelectedInventoryColor("");
-  };
-
-  // Check if form is valid
   useEffect(() => {
-    const isValidDetails = Boolean(
+    if (productId) {
+      fetchProductData();
+    }
+  }, [productId]);
+
+  useEffect(() => {
+    const hasValidDetails = 
       formData.title && 
       formData.description && 
       formData.price && 
-      (formData.category && formData.category !== "custom" || (formData.category === "custom" && formData.customCategory)) &&
-      (formData.material && formData.material !== "custom" || (formData.material === "custom" && formData.customMaterial))
-    );
+      (formData.category || formData.customCategory) &&
+      (formData.gender || formData.customGender) &&
+      (formData.material || formData.customMaterial);
     
-    const isValidVariants = Boolean(
+    const hasValidVariants = 
       formData.colors.length > 0 && 
       formData.selectedSizes.length > 0 &&
-      formData.colorSizeInventory.length > 0
-    );
+      formData.colorSizeInventory.length > 0;
     
-    setIsFormValid(isValidDetails && isValidVariants);
+    setIsFormValid(hasValidDetails && hasValidVariants);
   }, [formData]);
 
-  // Handle color selection
-  const addColor = () => {
-    if (selectedColor && !formData.colors.includes(selectedColor)) {
-      const colorObj = availableColors.find(c => c.value === selectedColor);
-      if (colorObj) {
-        setFormData({
-          ...formData,
-          colors: [...formData.colors, selectedColor]
-        });
+  const fetchProductData = async () => {
+    try {
+      const response = await fetch(`http://localhost:5000/api/products/${productId}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch product');
       }
-      setSelectedColor("");
-    }
-  }
+      const data = await response.json();
+      
+      if (!data.success) {
+        throw new Error('Failed to fetch product data');
+      }
 
-  const addCustomColor = (color: string) => {
-    if (color && !formData.colors.includes(color) && colorCode) {
-      // Validate hex code format
-      const hexRegex = /^#[0-9A-Fa-f]{6}$/;
-      if (!hexRegex.test(colorCode)) {
-        setResponseMessage({ 
-          text: "Please enter a valid hex color code (e.g., #000000)", 
-          type: 'error' 
-        });
-        return;
-      }
+      const productData = data.data;
       
-      // Create a unique value for the custom color (using the name in lowercase with hyphens)
-      const customColorValue = color.toLowerCase().replace(/\s+/g, '-');
-      
-      // Add the custom color to the available colors array so it can be properly referenced
-      const newColor = {
-        id: Date.now(), // Use timestamp for a unique ID
-        name: color,
-        value: customColorValue,
-        code: colorCode
-      };
-      
-      // Update the availableColors array
-      availableColors.push(newColor);
-      
-      // Update form data with the new color
+      // Set form data with exact values from API
       setFormData({
-        ...formData,
-        colors: [...formData.colors, customColorValue] // Store the value, not the name
+        title: productData.name,
+        description: productData.description || '',
+        category: productData.category || '',
+        customCategory: productData.category || '',
+        gender: productData.gender || '',
+        customGender: productData.gender || '',
+        material: productData.material || '',
+        customMaterial: productData.material || '',
+        price: productData.price.toString(),
+        colors: productData.colors?.map((color: any) => color.name) || [],
+        selectedSizes: productData.sizes?.map((size: any) => size.name) || [],
+        colorSizeInventory: productData.inventory?.map((item: any) => ({
+          color: item.color,
+          size: item.size,
+          stock: item.stock
+        })) || []
       });
-      
-      setCustomColor("");
-      setColorCode("");
-      setSelectedColor("");
+    } catch (error) {
+      setResponseMessage({ text: "Error loading product data", type: 'error' });
+      console.error('Error fetching product:', error);
+    } finally {
+      setLoading(false);
     }
   };
-
-  // Remove a color
-  const removeColor = (color: string) => {
-    const newColors = formData.colors.filter(c => c !== color);
-    // Also remove inventory entries for this color
-    const newInventory = formData.colorSizeInventory.filter(item => item.color !== color);
-    
-    setFormData({
-      ...formData,
-      colors: newColors,
-      colorSizeInventory: newInventory
-    });
-  }
-
-  const addSizeInventory = () => {
-    if (selectedInventoryColor && selectedSize && sizeQuantity) {
-      const quantityNum = parseInt(sizeQuantity);
-      if (isNaN(quantityNum) || quantityNum < 1) {
-        alert("Please enter a valid quantity");
-        return;
-      }
-      
-      // Check if this color-size combination already exists
-      const existingEntry = formData.colorSizeInventory.find(
-        item => item.color === selectedInventoryColor && item.size === selectedSize
-      );
-      
-      if (existingEntry) {
-        alert("This color and size combination already exists");
-        return;
-      }
-      
-      // Add to inventory
-      setFormData({
-        ...formData,
-        selectedSizes: [...new Set([...formData.selectedSizes, selectedSize])],
-        colorSizeInventory: [
-          ...formData.colorSizeInventory,
-          {
-            color: selectedInventoryColor,
-            size: selectedSize,
-            stock: quantityNum
-          }
-        ]
-      });
-      
-      setSelectedSize("");
-      setSizeQuantity("");
-    } else {
-      alert("Please select color, size, and quantity");
-    }
-  }
-  // Remove an inventory entry
-  const removeInventoryItem = (colorVal: string, sizeVal: string) => {
-    const newInventory = formData.colorSizeInventory.filter(
-      item => !(item.color === colorVal && item.size === sizeVal)
-    );
-    
-    // Check if we need to remove any sizes that are no longer used
-    const sizesStillInUse = new Set(newInventory.map(item => item.size));
-    const newSizes = formData.selectedSizes.filter(size => sizesStillInUse.has(size));
-    
-    setFormData({
-      ...formData,
-      colorSizeInventory: newInventory,
-      selectedSizes: newSizes
-    });
-  }
-
   // Handle input changes
   const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -334,8 +239,8 @@ export default function AddProductPage() {
     if (name === 'gender') {
       setFormData(prev => ({
         ...prev,
-      [name]: value
-    }));
+        [name]: value
+      }));
     } else if (value === "custom") {
       setFormData(prev => ({
         ...prev,
@@ -351,64 +256,48 @@ export default function AddProductPage() {
     }
   };
 
-  const formatDataForApi = () => {
-    // Clean up input data
-    const cleanPrice = parseFloat(formData.price);
-    
-    // Create a color mapping for easy lookup
-    const colorMapping: { [key: string]: { name: string; code: string } } = {};
-    formData.colors.forEach(colorValue => {
-      const colorObj = availableColors.find(c => c.value === colorValue);
-      if (colorObj) {
-        colorMapping[colorValue] = {
-          name: colorObj.name,
-          code: colorObj.code
-        };
-    } else {
-        // For custom colors, use the color value as name and code
-        colorMapping[colorValue] = {
-          name: colorValue,
-          code: colorValue
-        };
-      }
-    });
-    
-    // Format the data for API
-    const formattedData = {
-      name: formData.title.trim(),
-      description: formData.description.trim(),
-      price: cleanPrice,
-      category: formData.category === "custom" ? formData.customCategory.trim() : formData.category,
-      gender: formData.gender,
-      material: formData.material === "custom" ? formData.customMaterial.trim() : formData.material,
-      colors: formData.colors.map(colorValue => ({
-        name: colorMapping[colorValue].name,
-        value: colorValue,
-        code: colorMapping[colorValue].code,
-        available: true
-      })),
-      sizes: formData.selectedSizes.map(size => {
-        const sizeObj = availableSizes.find(s => s.value === size);
+// Format data for API submission
+const formatDataForApi = () => {
+    // Get unique colors by name
+    const uniqueColors = formData.colors.map(color => {
+      const colorObj = availableColors.find(c => c.name === color);
       return {
-          name: sizeObj ? sizeObj.name : size.toUpperCase(),
-          value: size.toUpperCase(),
-          available: true
-        };
-      }),
-      inventory: formData.colorSizeInventory.map(item => ({
-        color: item.color,
-        size: item.size.toUpperCase(),
-        stock: Number(item.stock)
-      }))
-    };
+        name: color,
+        code: colorObj ? colorObj.code : "#000000",
+        isAvailable: true
+      };
+    });
   
-    // Debug log
-    console.log("Colors sent to API:", formattedData.colors);
-    console.log("Inventory sent to API:", formattedData.inventory);
-    
-    return formattedData;
+    // Get unique sizes by name
+    const uniqueSizes = formData.selectedSizes.map(size => {
+      const sizeObj = availableSizes.find(s => s.name === size);
+      return {
+        name: size,
+        isAvailable: true
+      };
+    });
+  
+    // Get unique inventory items by color and size combination
+    const uniqueInventory = formData.colorSizeInventory.map(item => ({
+      color: item.color,
+      size: item.size,
+      stock: item.stock
+    }));
+  
+    return {
+      name: formData.title,
+      description: formData.description,
+      price: parseFloat(formData.price),
+      category: formData.category === "custom" ? formData.customCategory : formData.category,
+      gender: formData.gender === "custom" ? formData.customGender : formData.gender,
+      material: formData.material === "custom" ? formData.customMaterial : formData.material,
+      colors: uniqueColors,
+      sizes: uniqueSizes,
+      inventory: uniqueInventory
+    };
   };
 
+  // Handle form submission
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     
@@ -416,120 +305,119 @@ export default function AddProductPage() {
       setResponseMessage({ text: "Please fill in all required fields", type: 'error' });
       return;
     }
-  
-    // Check if all colors have size and quantity entries
-    const colorsWithoutInventory = formData.colors.filter(color => {
-      return !formData.colorSizeInventory.some(item => item.color === color);
-    });
-  
-    if (colorsWithoutInventory.length > 0) {
-      const colorNames = colorsWithoutInventory.map(color => {
-        const colorObj = availableColors.find(c => c.value === color);
-        return colorObj ? colorObj.name : color;
-      });
-      
-      setResponseMessage({ 
-        text: `No size and quantity added for the following colors: ${colorNames.join(', ')}`, 
-        type: 'error' 
-      });
-      return;
-    }
-    
+
     const dataForApi = formatDataForApi();
-    console.log("Sending data to API:", dataForApi);
     
     try {
-      setIsLoading(true);
-      const response = await fetch('http://localhost:5000/api/products', {
-        method: 'POST',
+      setLoading(true);
+      const response = await fetch(`http://localhost:5000/api/products/${productId}`, {
+        method: 'PUT',
         headers: {
           'Content-Type': 'application/json'
         },
         body: JSON.stringify(dataForApi)
       });
       
-      if (response.ok) {
-        const data = await response.json();
-        console.log('Product created with ID:', data.data._id);
-        if (!data.data._id) {
-          setResponseMessage({ text: "Error: Product ID not received from server", type: 'error' });
-          return;
+      const data = await response.json();
+      
+      if (response.ok && data.success) {
+        if (newlyAddedColors.length > 0) {
+          // Format new colors for the image upload page
+          const formattedNewColors = newlyAddedColors.map(color => {
+            const colorObj = availableColors.find(c => c.name === color);
+            return {
+              name: color,
+              code: colorObj ? colorObj.code : "#000000"
+            };
+          });
+
+          setResponseMessage({ 
+            text: "Product updated successfully! Redirecting to add images for new colors...", 
+            type: 'success' 
+          });
+          
+          // Redirect to image upload page with new colors data
+          setTimeout(() => {
+            router.push(`/product-management/${productId}/update-images?newColors=${encodeURIComponent(JSON.stringify(formattedNewColors))}`);
+          }, 1500);
+        } else {
+          setResponseMessage({ 
+            text: "Product updated successfully! Redirecting to product list...", 
+            type: 'success' 
+          });
+          setTimeout(() => {
+            router.push('/product-management/list');
+          }, 1500);
         }
-        setResponseMessage({ text: "Product added successfully! Redirecting to image upload...", type: 'success' });
-        // Redirect to image upload page with product data
-        router.push(`/product-management/${data.data._id}/images?productData=${encodeURIComponent(JSON.stringify(data.data))}`);
       } else {
-        const errorText = await response.text(); // Get the raw response text
-        let errorMessage = "Failed to add product";
-        
-        try {
-          // Try to parse it as JSON
-          const errorJson = JSON.parse(errorText);
-          errorMessage = errorJson.message || errorJson.error || errorMessage;
-        } catch (e) {
-          // If parsing fails, use the raw text
-          errorMessage = errorText || errorMessage;
-        }
-        
-        console.error("Server error response:", errorText); // Debug log
-        setResponseMessage({ text: `Error: ${errorMessage}`, type: 'error' });
+        setResponseMessage({ 
+          text: `Error: ${data.message || 'Failed to update product'}`, 
+          type: 'error' 
+        });
       }
     } catch (error) {
-      console.error("Error submitting product:", error);
-      setResponseMessage({ text: `Connection error: ${error instanceof Error ? error.message : 'Unknown error'}`, type: 'error' });
+      setResponseMessage({ 
+        text: "Failed to connect to the server. Please try again.", 
+        type: 'error' 
+      });
+      console.error("Error updating product:", error);
     } finally {
-      setIsLoading(false);
+      setLoading(false);
     }
   };
 
-  const debugColorData = () => {
-    console.log("Available colors:", availableColors);
-    console.log("Form data colors:", formData.colors);
-    console.log("Color-size inventory:", formData.colorSizeInventory);
-    
-    // Check for mismatches
-    formData.colorSizeInventory.forEach(item => {
-      const colorExists = formData.colors.includes(item.color);
-      if (!colorExists) {
-        console.error(`MISMATCH: Inventory uses color "${item.color}" which is not in colors array`);
-      }
-    });
+  const addColor = () => {
+    if (selectedColor && !formData.colors.includes(selectedColor)) {
+      setFormData(prev => ({
+        ...prev,
+        colors: [...prev.colors, selectedColor]
+      }));
+      setNewlyAddedColors(prev => [...prev, selectedColor]);
+      setSelectedColor("");
+    }
   };
+
+  const addCustomColor = (colorName: string) => {
+    if (colorName && !formData.colors.includes(colorName)) {
+      setFormData(prev => ({
+        ...prev,
+        colors: [...prev.colors, colorName]
+      }));
+      setNewlyAddedColors(prev => [...prev, colorName]);
+      setSelectedColor("");
+      setCustomColor("");
+      setColorCode("");
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <Loader2 className="h-8 w-8 animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
-      {isLoading && (
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50">
-          <div className="bg-white dark:bg-gray-800 p-8 rounded-xl shadow-2xl flex flex-col items-center gap-6 min-w-[300px]">
-            <div className="relative">
-              <Loader2 className="h-12 w-12 animate-spin text-primary" />
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="h-8 w-8 rounded-full border-4 border-primary border-t-transparent animate-spin"></div>
-              </div>
-            </div>
-            <div className="text-center">
-              <p className="text-xl font-semibold mb-2">Creating Product</p>
-              <p className="text-gray-500 dark:text-gray-400">
-                Please wait while we process your request...
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
       <div className="flex items-center justify-between">
         <div className="flex items-center">
-          <Link href="/product-management">
+          <Link href="/product-management/list">
             <Button variant="ghost" className="mr-2">
               <ArrowLeft className="h-4 w-4 mr-2" />
               Back
             </Button>
           </Link>
-          <h1 className="text-2xl font-bold">Add New Product</h1>
+          <h1 className="text-2xl font-bold">Update Product</h1>
         </div>
       </div>
 
       {responseMessage && (
-        <div className={`p-4 rounded-md ${responseMessage.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+        <div className={`p-4 rounded-md ${
+          responseMessage.type === 'success' 
+            ? 'bg-green-100 text-green-800 border border-green-200' 
+            : 'bg-red-100 text-red-800 border border-red-200'
+        }`}>
           {responseMessage.text}
         </div>
       )}
@@ -595,13 +483,13 @@ export default function AddProductPage() {
                           if (value !== "custom") {
                             setFormData(prev => ({
                               ...prev,
-                              customCategory: ""
+                              customCategory: value
                             }));
                           }
                         }}
                       >
                         <SelectTrigger>
-                          <SelectValue placeholder="Select category" />
+                          <SelectValue>{formData.category}</SelectValue>
                         </SelectTrigger>
                         <SelectContent>
                           {categories.map(category => (
@@ -625,12 +513,21 @@ export default function AddProductPage() {
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="gender">Gender*</Label>
+                    <div className="flex gap-2">
                       <Select 
                         value={formData.gender}
-                      onValueChange={(value: string) => handleSelectChange("gender", value)}
+                        onValueChange={(value: string) => {
+                          handleSelectChange("gender", value);
+                          if (value !== "custom") {
+                            setFormData(prev => ({
+                              ...prev,
+                              customGender: value
+                            }));
+                          }
+                        }}
                       >
                         <SelectTrigger>
-                          <SelectValue placeholder="Select gender" />
+                          <SelectValue>{formData.gender}</SelectValue>
                         </SelectTrigger>
                         <SelectContent>
                           {genders.map(gender => (
@@ -638,8 +535,19 @@ export default function AddProductPage() {
                               {gender.name}
                             </SelectItem>
                           ))}
+                          <SelectItem value="custom">Custom gender</SelectItem>
                         </SelectContent>
                       </Select>
+                      {formData.gender === "custom" && (
+                        <Input 
+                          placeholder="Enter gender" 
+                          value={formData.customGender}
+                          name="customGender"
+                          onChange={handleChange}
+                          required
+                        />
+                      )}
+                    </div>
                   </div>
                   <div className="space-y-2">
                     <Label htmlFor="material">Material*</Label>
@@ -651,13 +559,13 @@ export default function AddProductPage() {
                           if (value !== "custom") {
                             setFormData(prev => ({
                               ...prev,
-                              customMaterial: ""
+                              customMaterial: value
                             }));
                           }
                         }}
                       >
                         <SelectTrigger>
-                          <SelectValue placeholder="Select material" />
+                          <SelectValue>{formData.material}</SelectValue>
                         </SelectTrigger>
                         <SelectContent>
                           {materials.map(material => (
@@ -723,11 +631,9 @@ export default function AddProductPage() {
                             onChange={(e) => setCustomColor(e.target.value)}
                           />
                           <Input 
-                            placeholder="Enter hex code (e.g., #000000)" 
+                            placeholder="Enter color code (hex)" 
                             value={colorCode}
                             onChange={(e) => setColorCode(e.target.value)}
-                            pattern="^#[0-9A-Fa-f]{6}$"
-                            title="Please enter a valid hex color code (e.g., #000000)"
                           />
                         </>
                       )}
@@ -749,38 +655,47 @@ export default function AddProductPage() {
                 </div>
 
                 {formData.colors.length > 0 && (
-                  <div className="flex flex-wrap gap-2 mt-4">
-                    {formData.colors.map(color => {
-                      const colorObj = availableColors.find(c => c.value === color) || { name: color, value: color, id: 0, code: "" };
-                      
-                      return (
-                        <div 
-                          key={color} 
-                          className="flex items-center rounded-full px-3 py-1 bg-gray-800"
-                        >
-                          <span className="mr-2">{colorObj.name}</span>
-                          <Button 
-                            type="button" 
-                            variant="ghost" 
-                            size="sm" 
-                            className="h-5 w-5 p-0 rounded-full"
-                            onClick={() => removeColor(color)}
-                          >
-                            <X className="h-3 w-3" />
-                          </Button>
-                        </div>
-                      );
-                    })}
-                  </div>
+                    <div className="flex flex-wrap gap-2 mt-4">
+                        {formData.colors.map(color => {
+                        const colorObj = availableColors.find(c => c.name === color);
+                        
+                        return (
+                            <div 
+                            key={color} 
+                            className="flex items-center rounded-full px-3 py-1 bg-gray-800"
+                            >
+                            <span className="mr-2">{color}</span>
+                            <Button 
+                                type="button" 
+                                variant="ghost" 
+                                size="sm" 
+                                className="h-5 w-5 p-0 rounded-full"
+                                onClick={() => {
+                                setFormData(prev => ({
+                                    ...prev,
+                                    colors: prev.colors.filter(c => c !== color)
+                                }));
+                                }}
+                            >
+                                <X className="h-3 w-3" />
+                            </Button>
+                            </div>
+                        );
+                        })}
+                    </div>
                 )}
               </div>
 
               <div className="border-t border-gray-800 my-6"></div>
 
               <h3 className="text-lg font-medium mb-4">Size & Inventory</h3>
+              <p className="text-sm text-yellow-600 mb-4">
+                Note: Updating the quantity for a specific color and size combination will replace the existing quantity. 
+                For example, if Black (XL) has 10 pieces and you update it to 15, the new quantity will be 15, not 25.
+              </p>
               <div className="space-y-4">
                 <div className="flex items-end gap-2">
-                <div className="flex-1">
+                  <div className="flex-1">
                     <Label htmlFor="color-select">Color*</Label>
                     <Select 
                       value={selectedInventoryColor}
@@ -791,10 +706,10 @@ export default function AddProductPage() {
                       </SelectTrigger>
                       <SelectContent>
                         {formData.colors.map(color => {
-                          const colorObj = availableColors.find(c => c.value === color) || { name: color, value: color, id: 0, code: "" };
+                          const colorObj = availableColors.find(c => c.name === color);
                           return (
                             <SelectItem key={color} value={color}>
-                              {colorObj.name}
+                              {colorObj?.name || color}
                             </SelectItem>
                           );
                         })}
@@ -830,7 +745,34 @@ export default function AddProductPage() {
                       min="1"
                     />
                   </div>
-                  <Button type="button" onClick={addSizeInventory}>
+                  <Button 
+                    type="button" 
+                    onClick={() => {
+                      if (selectedInventoryColor && selectedSize && sizeQuantity) {
+                        const quantityNum = parseInt(sizeQuantity);
+                        if (isNaN(quantityNum) || quantityNum < 1) {
+                          alert("Please enter a valid quantity");
+                          return;
+                        }
+                        
+                        setFormData(prev => ({
+                          ...prev,
+                          selectedSizes: [...new Set([...prev.selectedSizes, selectedSize])],
+                          colorSizeInventory: [
+                            ...prev.colorSizeInventory,
+                            {
+                              color: selectedInventoryColor,
+                              size: selectedSize,
+                              stock: quantityNum
+                            }
+                          ]
+                        }));
+                        
+                        setSelectedSize("");
+                        setSizeQuantity("");
+                      }
+                    }}
+                  >
                     <Plus className="h-4 w-4 mr-2" />
                     Add
                   </Button>
@@ -848,13 +790,12 @@ export default function AddProductPage() {
                     </TableHeader>
                     <TableBody>
                       {formData.colorSizeInventory.map((item, index) => {
-                        const colorObj = availableColors.find(c => c.value === item.color) || { name: item.color, value: item.color, id: 0, code: "" };
-                        const sizeObj = availableSizes.find(s => s.value === item.size) || { name: item.size, value: item.size, id: 0 };
-                        
+                        const colorObj = availableColors.find(c => c.name === item.color);
+                        const sizeObj = availableSizes.find(s => s.value === item.size);
                         return (
                           <TableRow key={index}>
-                            <TableCell>{colorObj.name}</TableCell>
-                            <TableCell>{sizeObj.name}</TableCell>
+                            <TableCell>{colorObj?.name || item.color}</TableCell>
+                            <TableCell>{sizeObj?.name || item.size}</TableCell>
                             <TableCell>{item.stock}</TableCell>
                             <TableCell>
                               <Button 
@@ -862,7 +803,14 @@ export default function AddProductPage() {
                                 variant="ghost" 
                                 size="sm" 
                                 className="h-8 w-8 p-0"
-                                onClick={() => removeInventoryItem(item.color, item.size)}
+                                onClick={() => {
+                                  setFormData(prev => ({
+                                    ...prev,
+                                    colorSizeInventory: prev.colorSizeInventory.filter(
+                                      (_, i) => i !== index
+                                    )
+                                  }));
+                                }}
                               >
                                 <X className="h-4 w-4" />
                               </Button>
@@ -879,21 +827,19 @@ export default function AddProductPage() {
         </Tabs>
 
         <div className="mt-6 flex items-center justify-end gap-4">
-          <Button type="button" variant="outline" disabled={isLoading}>Cancel</Button>
+          <Button type="button" variant="outline" onClick={() => router.push('/product-management/list')}>
+            Cancel
+          </Button>
           <Button 
             type="submit" 
-            disabled={!isFormValid || isLoading}
+            disabled={!isFormValid}
             className="flex items-center"
           >
-            {isLoading ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <Save className="h-4 w-4 mr-2" />
-            )}
-            Save Product
+            <Save className="h-4 w-4 mr-2" />
+            Update Product
           </Button>
         </div>
       </form>
     </div>
   )
-}
+} 

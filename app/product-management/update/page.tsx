@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -29,8 +29,21 @@ import {
   Save
 } from "lucide-react"
 import Link from "next/link"
+import { useRouter, useSearchParams } from "next/navigation"
 
 export default function UpdateProductPage() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const productId = searchParams.get('id');
+
+  useEffect(() => {
+    if (productId) {
+      router.push(`/product-management/update/${productId}`);
+    } else {
+      router.push('/product-management/list');
+    }
+  }, [productId, router]);
+
   // Available options for dropdowns
   const availableColors = [
     { id: 1, name: "Black", value: "black" },

@@ -12,20 +12,12 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { 
-  ArrowLeft, 
-  Trash2, 
-  AlertTriangle,
+  ArrowLeft,
+  Edit,
   Loader2
 } from "lucide-react"
 import Link from "next/link"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
+import { useRouter } from "next/navigation"
 
 type Product = {
   _id: string;
@@ -41,13 +33,12 @@ type Product = {
   }>;
 }
 
-export default function DeleteProductPage() {
+export default function ListProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [deleteStatus, setDeleteStatus] = useState<Record<string, { status: 'idle' | 'deleting' | 'success' | 'error', loading: boolean }>>({});
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [productToDelete, setProductToDelete] = useState<Product | null>(null);
+  const [updateStatus, setUpdateStatus] = useState<Record<string, { status: 'idle' | 'updating' | 'success' | 'error', loading: boolean }>>({});
+  const router = useRouter();
 
   useEffect(() => {
     fetchProducts();
@@ -69,48 +60,8 @@ export default function DeleteProductPage() {
     }
   };
 
-  const handleDeleteClick = (product: Product) => {
-    setProductToDelete(product);
-    setDeleteDialogOpen(true);
-  };
-
-  const handleDeleteConfirm = async () => {
-    if (!productToDelete) return;
-
-    setDeleteStatus(prev => ({ ...prev, [productToDelete._id]: { status: 'deleting', loading: true } }));
-    setDeleteDialogOpen(false);
-    
-    try {
-      const response = await fetch(`http://localhost:5000/api/products/${productToDelete._id}`, {
-        method: 'DELETE',
-      });
-
-      if (response.ok) {
-        setDeleteStatus(prev => ({ ...prev, [productToDelete._id]: { status: 'success', loading: false } }));
-        // Remove the deleted product from the list
-        setProducts(prev => prev.filter(product => product._id !== productToDelete._id));
-        // Clear the status after 2 seconds
-        setTimeout(() => {
-          setDeleteStatus(prev => {
-            const newStatus = { ...prev };
-            delete newStatus[productToDelete._id];
-            return newStatus;
-          });
-        }, 2000);
-      } else {
-        throw new Error('Failed to delete product');
-      }
-    } catch (error) {
-      setDeleteStatus(prev => ({ ...prev, [productToDelete._id]: { status: 'error', loading: false } }));
-      console.error('Error deleting product:', error);
-    } finally {
-      setProductToDelete(null);
-    }
-  };
-
-  const handleDeleteCancel = () => {
-    setDeleteDialogOpen(false);
-    setProductToDelete(null);
+  const handleUpdateClick = (product: Product) => {
+    router.push(`/product-management/update?id=${product._id}`);
   };
 
   if (loading) {
@@ -124,7 +75,7 @@ export default function DeleteProductPage() {
                 Back
               </Button>
             </Link>
-            <h1 className="text-2xl font-bold">Delete Products</h1>
+            <h1 className="text-2xl font-bold">Update Products</h1>
           </div>
         </div>
         <div className="p-4 rounded-md bg-blue-100 text-blue-800">
@@ -145,7 +96,7 @@ export default function DeleteProductPage() {
                 Back
               </Button>
             </Link>
-            <h1 className="text-2xl font-bold">Delete Products</h1>
+            <h1 className="text-2xl font-bold">Update Products</h1>
           </div>
         </div>
         <div className="p-4 rounded-md bg-red-100 text-red-800">
@@ -165,7 +116,7 @@ export default function DeleteProductPage() {
               Back
             </Button>
           </Link>
-          <h1 className="text-2xl font-bold">Delete Products</h1>
+          <h1 className="text-2xl font-bold">Update Products</h1>
         </div>
       </div>
 
@@ -190,16 +141,16 @@ export default function DeleteProductPage() {
                 <TableCell>Rs.{product.price}</TableCell>
                 <TableCell>{product.totalStock}</TableCell>
                 <TableCell className="text-right">
-                  <Button 
-                    variant="destructive" 
+                  <Button
+                    variant="outline"
                     size="sm"
-                    onClick={() => handleDeleteClick(product)}
-                    disabled={deleteStatus[product._id]?.status === 'deleting'}
+                    onClick={() => handleUpdateClick(product)}
+                    disabled={updateStatus[product._id]?.status === 'updating'}
                   >
-                    {deleteStatus[product._id]?.status === 'deleting' ? (
+                    {updateStatus[product._id]?.status === 'updating' ? (
                       <Loader2 className="h-4 w-4 animate-spin" />
                     ) : (
-                      <Trash2 className="h-4 w-4" />
+                      <Edit className="h-4 w-4" />
                     )}
                   </Button>
                 </TableCell>
@@ -208,30 +159,6 @@ export default function DeleteProductPage() {
           </TableBody>
         </Table>
       </Card>
-
-      {/* Delete Confirmation Dialog */}
-      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-destructive" />
-              Confirm Delete
-            </DialogTitle>
-            <DialogDescription>
-              Are you sure you want to delete the product "{productToDelete?.name}"? This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-          <DialogFooter>
-            <Button variant="outline" onClick={handleDeleteCancel}>
-                        Cancel
-                      </Button>
-            <Button variant="destructive" onClick={handleDeleteConfirm}>
-                        <Trash2 className="h-4 w-4 mr-2" />
-              Delete
-                      </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
     </div>
   );
-}
+} 
