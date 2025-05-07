@@ -29,11 +29,10 @@ import {
   Save
 } from "lucide-react"
 import Link from "next/link"
-import { useRouter } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 
-// This is a wrapper component that uses useSearchParams
+// This is a wrapper component that uses useSearchParams - now properly structured
 function ProductUpdateContent() {
-  const { useSearchParams } = require('next/navigation');
   const searchParams = useSearchParams();
   const productId = searchParams.get('id');
   const router = useRouter();
