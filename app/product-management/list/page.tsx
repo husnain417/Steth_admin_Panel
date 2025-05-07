@@ -46,7 +46,7 @@ export default function ListProductsPage() {
 
   const fetchProducts = async () => {
     try {
-      const response = await fetch('http://localhost:5000/api/products');
+      const response = await fetch('https://steth-backend.onrender.com/api/products');
       if (!response.ok) {
         throw new Error('Failed to fetch products');
       }

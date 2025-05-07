@@ -30,7 +30,7 @@ export default function StudentApprovalPage() {
   useEffect(() => {
     const fetchVerifications = async () => {
       try {
-        const response = await fetch('http://localhost:5000/api/student-verification/pending')
+        const response = await fetch('https://steth-backend.onrender.com/api/student-verification/pending')
         
         if (!response.ok) {
           throw new Error('Failed to fetch verification data')

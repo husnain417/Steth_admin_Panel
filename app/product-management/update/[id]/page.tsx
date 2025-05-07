@@ -187,7 +187,7 @@ export default function UpdateProductPage() {
 
   const fetchProductData = async () => {
     try {
-      const response = await fetch(`http://localhost:5000/api/products/${productId}`);
+      const response = await fetch(`https://steth-backend.onrender.com/api/products/${productId}`);
       if (!response.ok) {
         throw new Error('Failed to fetch product');
       }
@@ -310,7 +310,7 @@ const formatDataForApi = () => {
     
     try {
       setLoading(true);
-      const response = await fetch(`http://localhost:5000/api/products/${productId}`, {
+      const response = await fetch(`https://steth-backend.onrender.com/api/products/${productId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json'

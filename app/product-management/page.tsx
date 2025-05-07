@@ -20,7 +20,7 @@ export default function ProductManagementPage() {
   useEffect(() => {
     const fetchProductStats = async () => {
       try {
-        const response = await fetch('http://localhost:5000/api/dashboard/product-stats', {
+        const response = await fetch('https://steth-backend.onrender.com/api/dashboard/product-stats', {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',

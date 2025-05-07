@@ -36,14 +36,14 @@ export default function EditRelatedProductsPage() {
     const fetchData = async () => {
       try {
         // Fetch the current product
-        const productResponse = await fetch(`http://localhost:5000/api/products/${params.id}`)
+        const productResponse = await fetch(`https://steth-backend.onrender.com/api/products/${params.id}`)
         const productData = await productResponse.json()
         if (productData.product) {
           setProduct(productData.product)
         }
 
         // Fetch all products
-        const productsResponse = await fetch('http://localhost:5000/api/products')
+        const productsResponse = await fetch('https://steth-backend.onrender.com/api/products')
         const productsData = await productsResponse.json()
         if (productsData.products) {
           setAllProducts(productsData.products.filter((p: Product) => p._id !== params.id))
@@ -82,7 +82,7 @@ export default function EditRelatedProductsPage() {
 
     setSaving(true)
     try {
-      const response = await fetch(`http://localhost:5000/api/products/${params.id}/related`, {
+      const response = await fetch(`https://steth-backend.onrender.com/api/products/${params.id}/related`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json'

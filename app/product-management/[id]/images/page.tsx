@@ -154,7 +154,7 @@ export default function ProductImagesPage() {
     });
 
     try {
-      const response = await fetch(`http://localhost:5000/api/products/${params.id}/images/default`, {
+      const response = await fetch(`https://steth-backend.onrender.com/api/products/${params.id}/images/default`, {
         method: 'POST',
         body: formData
       });
@@ -196,7 +196,7 @@ export default function ProductImagesPage() {
         return;
       }
 
-      const response = await fetch(`http://localhost:5000/api/products/${params.id}/images/color/${color.name}`, {
+      const response = await fetch(`https://steth-backend.onrender.com/api/products/${params.id}/images/color/${color.name}`, {
         method: 'POST',
         body: formData
       });

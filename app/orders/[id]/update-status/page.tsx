@@ -42,7 +42,7 @@ export default function UpdateOrderStatusPage() {
 
   const fetchOrder = async () => {
     try {
-      const response = await fetch(`http://localhost:5000/api/orders/all`);
+      const response = await fetch(`https://steth-backend.onrender.com/api/orders/all`);
       if (!response.ok) {
         throw new Error('Failed to fetch order');
       }
@@ -73,8 +73,8 @@ export default function UpdateOrderStatusPage() {
     
     setUpdating(true);
     try {
-      console.log('Making PUT request to:', `http://localhost:5000/api/orders/update-status/${id}`);
-      const response = await fetch(`http://localhost:5000/api/orders/update-status/${id}`, {
+      console.log('Making PUT request to:', `https://steth-backend.onrender.com/api/orders/update-status/${id}`);
+      const response = await fetch(`https://steth-backend.onrender.com/api/orders/update-status/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

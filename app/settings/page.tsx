@@ -47,7 +47,7 @@ export default function SettingsPage() {
   const fetchUserProfile = async () => {
     try {
       setStatus({ type: 'loading', operation: 'profile', message: 'Fetching profile data...' })
-      const response = await fetch('http://localhost:5000/api/users/profile', {
+      const response = await fetch('https://steth-backend.onrender.com/api/users/profile', {
         headers: {
           'Authorization': `Bearer ${AUTH_TOKEN}`
         }
@@ -78,7 +78,7 @@ export default function SettingsPage() {
     const formData = new FormData()
     formData.append('profilePicture', file)
     try {
-      const response = await fetch('http://localhost:5000/api/users/upload-pic', {
+      const response = await fetch('https://steth-backend.onrender.com/api/users/upload-pic', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${AUTH_TOKEN}`
@@ -149,7 +149,7 @@ export default function SettingsPage() {
         newPassword: newPassword || undefined
       }
 
-      const response = await fetch('http://localhost:5000/api/users/update-account', {
+      const response = await fetch('https://steth-backend.onrender.com/api/users/update-account', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

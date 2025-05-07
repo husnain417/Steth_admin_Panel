@@ -34,14 +34,14 @@ export default function CustomersAlsoBoughtPage() {
     const fetchData = async () => {
       try {
         // Fetch all products
-        const productsResponse = await fetch('http://localhost:5000/api/products')
+        const productsResponse = await fetch('https://steth-backend.onrender.com/api/products')
         if (!productsResponse.ok) {
           throw new Error('Failed to fetch products')
         }
         const productsData = await productsResponse.json()
         
         // Fetch customers also bought products
-        const customersAlsoBoughtResponse = await fetch('http://localhost:5000/api/products/cob')
+        const customersAlsoBoughtResponse = await fetch('https://steth-backend.onrender.com/api/products/cob')
         if (!customersAlsoBoughtResponse.ok) {
           throw new Error('Failed to fetch customers also bought products')
         }
@@ -71,7 +71,7 @@ export default function CustomersAlsoBoughtPage() {
 
   const handleAddToCustomersAlsoBought = async (productId: string) => {
     try {
-      const response = await fetch('http://localhost:5000/api/products/customers-also-bought/add', {
+      const response = await fetch('https://steth-backend.onrender.com/api/products/customers-also-bought/add', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -109,7 +109,7 @@ export default function CustomersAlsoBoughtPage() {
 
   const handleRemoveFromCustomersAlsoBought = async (productId: string) => {
     try {
-      const response = await fetch('http://localhost:5000/api/products/customers-also-bought/remove', {
+      const response = await fetch('https://steth-backend.onrender.com/api/products/customers-also-bought/remove', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

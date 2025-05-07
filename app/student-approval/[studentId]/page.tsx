@@ -45,7 +45,7 @@ export default function StudentApprovalDetail() {
 
     const fetchVerification = async () => {
       try {
-        const response = await fetch(`http://localhost:5000/api/student-verification/${studentId}`)
+        const response = await fetch(`https://steth-backend.onrender.com/api/student-verification/${studentId}`)
         if (!response.ok) throw new Error("Failed to fetch student verification data")
         const data = await response.json()
         if (data.success && data.verification) {
@@ -66,7 +66,7 @@ export default function StudentApprovalDetail() {
     setIsLoading(true)
     try {
       // Updated to use the correct POST endpoint for approval
-      const response = await fetch(`http://localhost:5000/api/student-verification/${studentData?._id}/approve`, {
+      const response = await fetch(`https://steth-backend.onrender.com/api/student-verification/${studentData?._id}/approve`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -98,7 +98,7 @@ export default function StudentApprovalDetail() {
     setIsLoading(true)
     try {
       // Updated to use the correct POST endpoint for rejection
-      const response = await fetch(`http://localhost:5000/api/student-verification/${studentData?._id}/reject`, {
+      const response = await fetch(`https://steth-backend.onrender.com/api/student-verification/${studentData?._id}/reject`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -141,7 +141,7 @@ export default function StudentApprovalDetail() {
   const getProofDocumentUrl = (path: string) => {
     if (!path) return ''
     // Adjust this depending on how your server serves static files
-    return `http://localhost:5000/${path}`
+    return `https://steth-backend.onrender.com/${path}`
   }
   
   // Display placeholder or document viewer since direct image loading might be blocked by CORS
