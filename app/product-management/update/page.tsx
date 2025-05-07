@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, Suspense } from "react"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -29,12 +29,14 @@ import {
   Save
 } from "lucide-react"
 import Link from "next/link"
-import { useRouter, useSearchParams } from "next/navigation"
+import { useRouter } from "next/navigation"
 
-export default function UpdateProductPage() {
-  const router = useRouter();
+// This is a wrapper component that uses useSearchParams
+function ProductUpdateContent() {
+  const { useSearchParams } = require('next/navigation');
   const searchParams = useSearchParams();
   const productId = searchParams.get('id');
+  const router = useRouter();
 
   useEffect(() => {
     if (productId) {
@@ -391,4 +393,13 @@ export default function UpdateProductPage() {
       </form>
     </div>
   )
+}
+
+// Main page component with proper Suspense boundary
+export default function UpdateProductPage() {
+  return (
+    <Suspense fallback={<div className="p-6">Loading product information...</div>}>
+      <ProductUpdateContent />
+    </Suspense>
+  );
 }
