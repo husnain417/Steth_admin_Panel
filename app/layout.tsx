@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { usePathname } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { BarChart3, ChevronDown, Globe, LayoutDashboard, LogOut, Package, Settings, Wallet } from "lucide-react"
+import { BarChart3, ChevronDown, Globe, LayoutDashboard, LogOut, Package, Settings, Wallet, Image as ImageIcon, Palette } from "lucide-react"
 import { Inter } from "next/font/google"
 import "@/styles/globals.css"
 
@@ -109,6 +109,24 @@ export default function RootLayout({
                   Orders
                   </Button>
                 </Link>
+                <Link href="/hero-images" passHref>
+                  <Button 
+                    variant={isActivePath("/hero-images") ? "default" : "ghost"} 
+                    className="w-full justify-start gap-2"
+                  >
+                    <ImageIcon className="h-4 w-4" />
+                    Hero Images
+                  </Button>
+                </Link>
+                <Link href="/color-tiles" passHref>
+                  <Button 
+                    variant={isActivePath("/color-tiles") ? "default" : "ghost"} 
+                    className="w-full justify-start gap-2"
+                  >
+                    <Palette className="h-4 w-4" />
+                    Color Tiles
+                  </Button>
+                </Link>
                 <Link href="/settings" passHref>
                   <Button 
                     variant={isActivePath("/settings") ? "default" : "ghost"} 
@@ -138,6 +156,7 @@ export default function RootLayout({
                     {pathname === "/" ? "Dashboard" : 
                     pathname === "/product-management" ? "Product Management" :
                     pathname === "/student-approval" ? "Student Approval" :
+                    pathname === "/hero-images" ? "Hero Image Management" :
                     pathname === "/settings" ? "Settings" : ""}
                   </h1>
                 </div>
