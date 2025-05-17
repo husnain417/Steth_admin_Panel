@@ -125,7 +125,6 @@ export default function AddProductPage() {
   const genders: Gender[] = [
     { id: 1, name: "Men", value: "Men" },
     { id: 2, name: "Women", value: "Women" },
-    { id: 3, name: "Unisex", value: "Unisex" }
   ]
   
   

@@ -129,7 +129,6 @@ export default function UpdateProductPage() {
   const genders: Gender[] = [
     { id: 1, name: "Men", value: "men" },
     { id: 2, name: "Women", value: "women" },
-    { id: 3, name: "Unisex", value: "unisex" }
   ]
 
   // Form data state
