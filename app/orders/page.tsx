@@ -114,7 +114,7 @@ export default function OrdersPage() {
     }
   }
 
-  const getPaymentMethodDisplay = (paymentMethod: string) => {
+  const getPaymentMethodDisplay = (paymentMethod: string, order: Order) => {
     switch (paymentMethod) {
       case "cash-on-delivery":
         return (
@@ -125,9 +125,40 @@ export default function OrdersPage() {
         )
       case "bank-transfer":
         return (
-          <div className="flex items-center">
-            <CreditCard className="h-4 w-4 mr-1 text-blue-600" />
-            <span>Bank Transfer</span>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center">
+              <CreditCard className="h-4 w-4 mr-1 text-blue-600" />
+              <span>Bank Transfer</span>
+            </div>
+            {order.paymentReceipt?.uploaded && (
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button variant="ghost" size="sm" className="h-8">
+                    <Eye className="h-4 w-4 mr-1" />
+                    View Receipt
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-3xl">
+                  <DialogHeader>
+                    <DialogTitle>Payment Receipt</DialogTitle>
+                  </DialogHeader>
+                  <div className="mt-2">
+                    {order.paymentReceipt?.url ? (
+                      <div className="relative h-[70vh] w-full">
+                        <Image
+                          src={order.paymentReceipt.url || "/placeholder.svg"}
+                          alt="Payment Receipt"
+                          fill
+                          className="object-contain rounded-md cursor-zoom-in"
+                        />
+                      </div>
+                    ) : (
+                      <div className="p-4 bg-gray-100 text-center rounded-md">Receipt image not available</div>
+                    )}
+                  </div>
+                </DialogContent>
+              </Dialog>
+            )}
           </div>
         )
       default:
@@ -199,36 +230,7 @@ export default function OrdersPage() {
                 </TableCell>
                 <TableCell>${order.total.toFixed(2)}</TableCell>
                 <TableCell>
-                  {getPaymentMethodDisplay(order.paymentMethod)}
-                  {order.paymentMethod === "bank-transfer" && order.paymentReceipt?.uploaded && (
-                    <Dialog>
-                      <DialogTrigger asChild>
-                        <Button variant="ghost" size="sm" className="mt-1 h-8">
-                          <Eye className="h-4 w-4 mr-1" />
-                          View Receipt
-                        </Button>
-                      </DialogTrigger>
-                      <DialogContent className="max-w-3xl">
-                        <DialogHeader>
-                          <DialogTitle>Payment Receipt</DialogTitle>
-                        </DialogHeader>
-                        <div className="mt-2">
-                          {order.paymentReceipt?.url ? (
-                            <div className="relative h-[70vh] w-full">
-                              <Image
-                                src={order.paymentReceipt.url || "/placeholder.svg"}
-                                alt="Payment Receipt"
-                                fill
-                                className="object-contain rounded-md cursor-zoom-in"
-                              />
-                            </div>
-                          ) : (
-                            <div className="p-4 bg-gray-100 text-center rounded-md">Receipt image not available</div>
-                          )}
-                        </div>
-                      </DialogContent>
-                    </Dialog>
-                  )}
+                  {getPaymentMethodDisplay(order.paymentMethod, order)}
                 </TableCell>
                 <TableCell>
                   <span className={`px-2 py-1 rounded-full text-xs ${getStatusColor(order.status)}`}>
