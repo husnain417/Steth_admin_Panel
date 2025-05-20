@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { usePathname } from "next/navigation"
 import Link from "next/link"
 import { Button } from "@/components/ui/button"
-import { BarChart3, ChevronDown, Globe, LayoutDashboard, LogOut, Package, Settings, Wallet, Image as ImageIcon, Palette } from "lucide-react"
+import { BarChart3, ChevronDown, Globe, LayoutDashboard, LogOut, Package, Settings, Wallet, Image as ImageIcon, Palette, Mail } from "lucide-react"
 import { Inter } from "next/font/google"
 import "@/styles/globals.css"
 
@@ -127,6 +127,15 @@ export default function RootLayout({
                     Color Tiles
                   </Button>
                 </Link>
+                <Link href="/newsletter" passHref>
+                  <Button 
+                    variant={isActivePath("/newsletter") ? "default" : "ghost"} 
+                    className="w-full justify-start gap-2"
+                  >
+                    <Mail className="h-4 w-4" />
+                    Newsletter
+                  </Button>
+                </Link>
                 <Link href="/settings" passHref>
                   <Button 
                     variant={isActivePath("/settings") ? "default" : "ghost"} 
@@ -157,6 +166,7 @@ export default function RootLayout({
                     pathname === "/product-management" ? "Product Management" :
                     pathname === "/student-approval" ? "Student Approval" :
                     pathname === "/hero-images" ? "Hero Image Management" :
+                    pathname === "/newsletter" ? "Newsletter Management" :
                     pathname === "/settings" ? "Settings" : ""}
                   </h1>
                 </div>
