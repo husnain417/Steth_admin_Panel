@@ -14,10 +14,32 @@ import {
 import { 
   ArrowLeft,
   Edit,
-  Loader2
+  Loader2,
+  ChevronDown,
+  ChevronRight
 } from "lucide-react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
+
+type ColorImage = {
+  url: string;
+  alt: string;
+  isPrimary: boolean;
+  public_id: string;
+  _id: string;
+}
+
+type ColorStock = {
+  color: string;
+  images: ColorImage[];
+  _id: string;
+  // Future properties when available
+  sizes?: Array<{
+    size: string;
+    quantity: number;
+  }>;
+  totalQuantity?: number;
+}
 
 type Product = {
   _id: string;
@@ -31,7 +53,26 @@ type Product = {
     alt: string;
     _id: string;
   }>;
+  inventory: Array<{
+    color: string;
+    size: string;
+    stock: number;
+    _id: string;
+  }>;
+  colorImages: Array<{
+    color: string;
+    images: Array<{
+      url: string;
+      alt: string;
+      isPrimary: boolean;
+      public_id: string;
+      _id: string;
+    }>;
+    _id: string;
+  }>;
 }
+
+type ExpandedRows = Record<string, boolean>;
 
 export default function ListProductsPage() {
   const [products, setProducts] = useState<Product[]>([]);
@@ -46,7 +87,7 @@ export default function ListProductsPage() {
 
   const fetchProducts = async () => {
     try {
-      const response = await fetch('https://steth-backend.onrender.com/api/products');
+      const response = await fetch('http://localhost:5000/api/products');
       if (!response.ok) {
         throw new Error('Failed to fetch products');
       }
@@ -128,6 +169,7 @@ export default function ListProductsPage() {
               <TableHead>Category</TableHead>
               <TableHead>Gender</TableHead>
               <TableHead>Price</TableHead>
+              <TableHead>Total Stock</TableHead>
               <TableHead>Stock</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
@@ -138,8 +180,38 @@ export default function ListProductsPage() {
                 <TableCell className="font-medium">{product.name}</TableCell>
                 <TableCell>{product.category}</TableCell>
                 <TableCell>{product.gender}</TableCell>
-                <TableCell>Rs.{product.price}</TableCell>
-                <TableCell>{product.totalStock}</TableCell>
+                <TableCell>Rs.{product.price.toLocaleString()}</TableCell>
+                <TableCell>
+                  <span className={`font-medium ${product.totalStock < 10 ? 'text-red-600' : product.totalStock < 20 ? 'text-yellow-600' : 'text-green-600'}`}>
+                    {product.totalStock}
+                  </span>
+                </TableCell>
+                <TableCell>
+                  <div className="space-y-1">
+                    {product.inventory && product.inventory.length > 0 ? (
+                      product.inventory.map((item) => (
+                        <div key={item._id} className="flex items-center gap-2">
+                          <div 
+                            className="w-3 h-3 rounded-full border border-gray-300"
+                            style={{ backgroundColor: item.color.toLowerCase() }}
+                          ></div>
+                          <span className="text-sm">
+                            {item.color} - {item.size}: 
+                            <span className={`ml-1 font-medium ${
+                              item.stock < 5 ? 'text-red-600' : 
+                              item.stock < 10 ? 'text-yellow-600' : 
+                              'text-green-600'
+                            }`}>
+                              {item.stock}
+                            </span>
+                          </span>
+                        </div>
+                      ))
+                    ) : (
+                      <span className="text-sm text-gray-500">No stock data</span>
+                    )}
+                  </div>
+                </TableCell>
                 <TableCell className="text-right">
                   <Button
                     variant="outline"
@@ -161,4 +233,4 @@ export default function ListProductsPage() {
       </Card>
     </div>
   );
-} 
+}

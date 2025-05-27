@@ -55,7 +55,7 @@ export default function DeleteProductPage() {
 
   const fetchProducts = async () => {
     try {
-      const response = await fetch('https://steth-backend.onrender.com/api/products');
+      const response = await fetch('http://localhost:5000/api/products');
       if (!response.ok) {
         throw new Error('Failed to fetch products');
       }
@@ -81,7 +81,7 @@ export default function DeleteProductPage() {
     setDeleteDialogOpen(false);
     
     try {
-      const response = await fetch(`https://steth-backend.onrender.com/api/products/${productToDelete._id}`, {
+      const response = await fetch(`http://localhost:5000/api/products/${productToDelete._id}`, {
         method: 'DELETE',
       });
 

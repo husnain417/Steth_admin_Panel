@@ -1,13 +1,19 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { ArrowLeft, Loader2, Send, CheckCircle2 } from "lucide-react"
+import { ArrowLeft, Loader2, Send, CheckCircle2, Upload, X } from "lucide-react"
 import Link from "next/link"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
+import Image from "next/image"
+
+type UploadedImage = {
+  file: File;
+  preview: string;
+}
 
 export default function NewsletterPage() {
   const [subject, setSubject] = useState("")
@@ -15,6 +21,39 @@ export default function NewsletterPage() {
   const [sending, setSending] = useState(false)
   const [sendError, setSendError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
+  const [uploadedImages, setUploadedImages] = useState<UploadedImage[]>([])
+  const [uploading, setUploading] = useState(false)
+  const [uploadError, setUploadError] = useState<string | null>(null)
+
+  const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files
+    if (!files || files.length === 0) return
+
+    setUploading(true)
+    setUploadError(null)
+
+    try {
+      const newImages = Array.from(files).map(file => ({
+        file,
+        preview: URL.createObjectURL(file)
+      }))
+      setUploadedImages(prev => [...prev, ...newImages])
+    } catch (error) {
+      console.error('Error processing image:', error)
+      setUploadError('Failed to process image. Please try again.')
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  const removeImage = (index: number) => {
+    setUploadedImages(prev => {
+      const newImages = [...prev]
+      URL.revokeObjectURL(newImages[index].preview)
+      newImages.splice(index, 1)
+      return newImages
+    })
+  }
 
   const handleSendBulkEmail = async () => {
     if (!subject.trim() || !message.trim()) {
@@ -27,15 +66,16 @@ export default function NewsletterPage() {
     setSuccess(null)
 
     try {
+      const formData = new FormData()
+      formData.append('subject', subject)
+      formData.append('message', message)
+      uploadedImages.forEach((image, index) => {
+        formData.append(`images`, image.file)
+      })
+
       const response = await fetch("http://localhost:5000/api/subscribers/send-bulk-email", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          subject,
-          message,
-        }),
+        body: formData,
       })
 
       if (!response.ok) {
@@ -44,24 +84,22 @@ export default function NewsletterPage() {
 
       const data = await response.json()
       
-      // More robust success checking
-      // Check for explicit success property or success indicators in the message
       if (data.success === true || 
           (data.message && data.message.toLowerCase().includes('successfully'))) {
         setSuccess(data.message || "Emails sent successfully!")
         setSubject("")
         setMessage("")
+        // Clean up image previews
+        uploadedImages.forEach(image => URL.revokeObjectURL(image.preview))
+        setUploadedImages([])
       } else {
-        // Only throw error if there's a clear error indication
         throw new Error(data.message || data.error || "Failed to send emails")
       }
     } catch (error) {
       console.error("Error sending bulk email:", error)
       
-      // Extract meaningful error message
       let errorMessage = "Failed to send emails. Please try again."
       if (error instanceof Error) {
-        // Don't show "success" messages as errors
         if (!error.message.toLowerCase().includes('successfully')) {
           errorMessage = error.message
         }
@@ -72,6 +110,13 @@ export default function NewsletterPage() {
       setSending(false)
     }
   }
+
+  // Cleanup preview URLs when component unmounts
+  useEffect(() => {
+    return () => {
+      uploadedImages.forEach(image => URL.revokeObjectURL(image.preview))
+    }
+  }, [uploadedImages])
 
   return (
     <div className="space-y-6">
@@ -109,6 +154,49 @@ export default function NewsletterPage() {
               rows={5}
             />
           </div>
+
+          {/* Image Upload Section */}
+          <div className="space-y-2">
+            <Label>Images</Label>
+            <div className="flex flex-wrap gap-4">
+              {uploadedImages.map((image, index) => (
+                <div key={index} className="relative group">
+                  <div className="w-24 h-24 relative rounded-lg overflow-hidden border">
+                    <Image
+                      src={image.preview}
+                      alt="Uploaded image"
+                      fill
+                      className="object-cover"
+                    />
+                  </div>
+                  <button
+                    onClick={() => removeImage(index)}
+                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              ))}
+              <label className="w-24 h-24 border-2 border-dashed rounded-lg flex items-center justify-center cursor-pointer hover:border-gray-400 transition-colors">
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  className="hidden"
+                  disabled={uploading}
+                />
+                {uploading ? (
+                  <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+                ) : (
+                  <Upload className="h-6 w-6 text-gray-400" />
+                )}
+              </label>
+            </div>
+            {uploadError && (
+              <div className="text-red-500 text-sm">{uploadError}</div>
+            )}
+          </div>
+
           {sendError && (
             <div className="text-red-500 text-sm">{sendError}</div>
           )}

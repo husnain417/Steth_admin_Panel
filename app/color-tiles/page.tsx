@@ -42,7 +42,7 @@ export default function ColorTilesPage() {
 
   const fetchColorTiles = async () => {
     try {
-      const response = await fetch('https://steth-backend.onrender.com/api/color-tiles')
+      const response = await fetch('http://localhost:5000/api/color-tiles')
       if (!response.ok) throw new Error('Failed to fetch color tiles')
       const responseData = await response.json()
       console.log('Color Tiles API Response:', responseData)
@@ -76,7 +76,7 @@ export default function ColorTilesPage() {
       formData.append('colorName', colorName)
       formData.append('image', selectedImage)
 
-      const response = await fetch('https://steth-backend.onrender.com/api/color-tiles', {
+      const response = await fetch('http://localhost:5000/api/color-tiles', {
         method: 'POST',
         body: formData,
       })
@@ -108,7 +108,7 @@ export default function ColorTilesPage() {
     if (!colorToDelete) return
 
     try {
-      const response = await fetch(`https://steth-backend.onrender.com/api/color-tiles/${colorToDelete}`, {
+      const response = await fetch(`http://localhost:5000/api/color-tiles/${colorToDelete}`, {
         method: 'DELETE',
       })
 

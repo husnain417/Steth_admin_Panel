@@ -55,7 +55,7 @@ export default function DashboardPage() {
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        const response = await fetch(process.env.NEXT_PUBLIC_API_URL || 'https://steth-backend.onrender.com/api/dashboard/stats')
+        const response = await fetch(process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api/dashboard/stats')
         const data = await response.json()
 
         if (data.success) {
@@ -74,7 +74,7 @@ export default function DashboardPage() {
 
     const fetchBestSellingProducts = async () => {
       try {
-        const response = await fetch('https://steth-backend.onrender.com/api/dashboard/bestselling')
+        const response = await fetch('http://localhost:5000/api/dashboard/bestselling')
         const data = await response.json()
 
         if (data.success) {
@@ -89,7 +89,7 @@ export default function DashboardPage() {
 
     const fetchStudentVerifications = async () => {
       try {
-        const response = await fetch('https://steth-backend.onrender.com/api/dashboard/student-verifications')
+        const response = await fetch('http://localhost:5000/api/dashboard/student-verifications')
         const data = await response.json()
 
         if (data.success) {

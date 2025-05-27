@@ -35,7 +35,7 @@ export default function HeroImagesPage() {
     try {
       setIsTabLoading(true);
       console.log(`Fetching images for ${pageType} page...`);
-      const response = await fetch(`https://steth-backend.onrender.com/api/hero-images/${pageType}`);
+      const response = await fetch(`http://localhost:5000/api/hero-images/${pageType}`);
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
@@ -90,7 +90,7 @@ export default function HeroImagesPage() {
         formData.append("mobileImage", mobileImage);
         formData.append("pageType", activeTab);
 
-        const response = await fetch(`https://steth-backend.onrender.com/api/hero-images/${activeTab}`, {
+        const response = await fetch(`http://localhost:5000/api/hero-images/${activeTab}`, {
           method: "POST",
           body: formData,
         });
@@ -115,7 +115,7 @@ export default function HeroImagesPage() {
           webFormData.append("pageType", activeTab);
           webFormData.append("viewType", "web");
 
-          const webResponse = await fetch(`https://steth-backend.onrender.com/api/hero-images/${activeTab}/web`, {
+          const webResponse = await fetch(`http://localhost:5000/api/hero-images/${activeTab}/web`, {
             method: "POST",
             body: webFormData,
           });
@@ -140,7 +140,7 @@ export default function HeroImagesPage() {
           mobileFormData.append("pageType", activeTab);
           mobileFormData.append("viewType", "mobile");
 
-          const mobileResponse = await fetch(`https://steth-backend.onrender.com/api/hero-images/${activeTab}/mobile`, {
+          const mobileResponse = await fetch(`http://localhost:5000/api/hero-images/${activeTab}/mobile`, {
             method: "POST",
             body: mobileFormData,
           });
@@ -182,7 +182,7 @@ export default function HeroImagesPage() {
   const handleDelete = async (viewType: "web" | "mobile") => {
     try {
       console.log(`Deleting ${viewType} image for ${activeTab} page...`);
-      const response = await fetch(`https://steth-backend.onrender.com/api/hero-images/${activeTab}/${viewType}`, {
+      const response = await fetch(`http://localhost:5000/api/hero-images/${activeTab}/${viewType}`, {
         method: "DELETE",
       });
 
