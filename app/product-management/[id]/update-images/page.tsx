@@ -111,7 +111,7 @@ export default function UpdateProductImagesPage() {
           });
 
           const response = await fetch(
-            `http://localhost:5000/api/products/${productId}/images/color/${color.name}`,
+            `https://steth-backend.onrender.com/api/products/${productId}/images/color/${color.name}`,
             {
               method: 'POST',
               body: formData

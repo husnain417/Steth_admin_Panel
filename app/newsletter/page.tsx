@@ -73,7 +73,7 @@ export default function NewsletterPage() {
         formData.append(`images`, image.file)
       })
 
-      const response = await fetch("http://localhost:5000/api/subscribers/send-bulk-email", {
+      const response = await fetch("https://steth-backend.onrender.com/api/subscribers/send-bulk-email", {
         method: "POST",
         body: formData,
       })
