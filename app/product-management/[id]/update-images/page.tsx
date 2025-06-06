@@ -15,7 +15,7 @@ type Color = {
 }
 
 type ResponseMessage = {
-  text: string;
+
   type: 'success' | 'error';
 }
 

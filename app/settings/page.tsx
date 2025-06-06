@@ -8,8 +8,6 @@ import { Label } from "@/components/ui/label"
 import { Upload, CheckCircle2, XCircle, Loader2, Eye, EyeOff } from "lucide-react"
 import { useToast } from "@/components/ui/use-toast"
 
-const AUTH_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4MDY2YWI0M2JlMjJkMzA3MWFhY2FiMCIsInVzZXJuYW1lIjoiYWRtaW4xIiwiZW1haWwiOiJhZG1pbkBleGFtcGxlLmNvbSIsImlhdCI6MTc0NTg3MTAwOSwiZXhwIjoxNzQ1ODg5MDA5fQ.R7nPOFK4JsxiuULIDRhP1JhO0nvveWmHYZuITxx4rBw"
-
 interface UserData {
   _id: string;
   username: string;
@@ -26,6 +24,7 @@ export default function SettingsPage() {
   const [passwordError, setPasswordError] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [isUploadingImage, setIsUploadingImage] = useState(false)
+  const [currentToken, setCurrentToken] = useState<string>("")
   const [status, setStatus] = useState<{
     type: 'idle' | 'loading' | 'success' | 'error';
     operation: 'profile' | 'image' | 'none';
@@ -40,30 +39,142 @@ export default function SettingsPage() {
   const [showNewPassword, setShowNewPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
+  // Helper function to decode JWT (without verification)
+  const decodeJWT = (token: string) => {
+    try {
+      const base64Url = token.split('.')[1];
+      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+      return JSON.parse(atob(base64));
+    } catch (e) {
+      return null;
+    }
+  };
+
+  // Check if token is expired
+  const isTokenExpired = (token: string) => {
+    if (!token) return true;
+    const decoded = decodeJWT(token);
+    return decoded?.exp && decoded.exp * 1000 < Date.now();
+  };
+
+  // Get access token with improved cross-origin handling
+  const getAccessToken = () => {
+    if (typeof window !== 'undefined') {
+      // First check URL parameters (priority for cross-origin)
+      const urlParams = new URLSearchParams(window.location.search);
+      const tokenFromUrl = urlParams.get('token');
+      
+      if (tokenFromUrl) {
+        try {
+          const decodedToken = decodeURIComponent(tokenFromUrl);
+          console.log('Token found in URL:', decodedToken.substring(0, 20) + '...');
+          
+          // Validate token is not expired
+          if (!isTokenExpired(decodedToken)) {
+            // Store in memory for this session
+            setCurrentToken(decodedToken);
+            
+            // Also try to store in localStorage (may fail in cross-origin)
+            try {
+              localStorage.setItem('accessToken', decodedToken);
+            } catch (e) {
+              console.warn('Could not store token in localStorage (cross-origin):', e);
+            }
+            
+            // Clean up URL by removing token parameter
+            const newUrl = new URL(window.location.href);
+            newUrl.searchParams.delete('token');
+            window.history.replaceState({}, document.title, newUrl.toString());
+            
+            return decodedToken;
+          } else {
+            console.error('Token from URL is expired');
+          }
+        } catch (error) {
+          console.error('Error decoding token from URL:', error);
+        }
+      }
+      
+      // If we have a token in state, use it
+      if (currentToken && !isTokenExpired(currentToken)) {
+        return currentToken;
+      }
+      
+      // Fallback to localStorage (may not work in cross-origin)
+      try {
+        const localToken = localStorage.getItem('accessToken');
+        if (localToken && !isTokenExpired(localToken)) {
+          setCurrentToken(localToken);
+          return localToken;
+        }
+      } catch (e) {
+        console.warn('Could not access localStorage (cross-origin):', e);
+      }
+    }
+    return '';
+  }
+
   useEffect(() => {
-    fetchUserProfile()
+    // Initialize token and fetch profile
+    const token = getAccessToken();
+    if (token) {
+      fetchUserProfile();
+    } else {
+      setStatus({ 
+        type: 'error', 
+        operation: 'profile', 
+        message: 'No valid access token found. Please log in again.' 
+      });
+    }
   }, [])
 
   const fetchUserProfile = async () => {
     try {
       setStatus({ type: 'loading', operation: 'profile', message: 'Fetching profile data...' })
-      const response = await fetch('https://steth-backend.onrender.com/file', {
+      
+      const token = getAccessToken();
+      if (!token) {
+        throw new Error('No access token found');
+      }
+
+      if (isTokenExpired(token)) {
+        throw new Error('Session expired');
+      }
+
+      console.log('Making API call with token:', token.substring(0, 20) + '...');
+
+      const response = await fetch('http://localhost:5000/file', {
         headers: {
-          'Authorization': `Bearer ${AUTH_TOKEN}`
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
         }
       })
+      
+      console.log('API Response status:', response.status);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('API Error Response:', errorText);
+        throw new Error(`HTTP ${response.status}: ${errorText}`);
+      }
+      
       const data = await response.json()
+      console.log('API Response data:', data);
+      
       if (data.user) {
         setUserData(data.user)
         setUsername(data.user.username)
         setStatus({ type: 'success', operation: 'profile', message: 'Profile loaded successfully' })
+      } else {
+        throw new Error('No user data received from API')
       }
     } catch (error) {
       console.error("Error fetching user profile:", error)
-      setStatus({ type: 'error', operation: 'profile', message: 'Failed to fetch profile data' })
+      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch profile data';
+      setStatus({ type: 'error', operation: 'profile', message: errorMessage })
       toast({
         title: "Error",
-        description: "Failed to fetch user profile",
+        description: errorMessage,
         variant: "destructive"
       })
     }
@@ -77,11 +188,17 @@ export default function SettingsPage() {
     setStatus({ type: 'loading', operation: 'image', message: 'Uploading profile picture...' })
     const formData = new FormData()
     formData.append('profilePicture', file)
+    
     try {
-      const response = await fetch('https://steth-backend.onrender.com/api/users/upload-pic', {
+      const token = getAccessToken();
+      if (!token || isTokenExpired(token)) {
+        throw new Error('Session expired. Please log in again.');
+      }
+
+      const response = await fetch('http://localhost:5000/api/users/upload-pic', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${AUTH_TOKEN}`
+          'Authorization': `Bearer ${token}`
         },
         body: formData
       })
@@ -108,7 +225,7 @@ export default function SettingsPage() {
       setStatus({ type: 'error', operation: 'image', message: 'Failed to upload profile picture' })
       toast({
         title: "Error",
-        description: "Failed to upload profile picture",
+        description: error instanceof Error ? error.message : "Failed to upload profile picture",
         variant: "destructive"
       })
     } finally {
@@ -142,18 +259,24 @@ export default function SettingsPage() {
 
     setIsLoading(true)
     setStatus({ type: 'loading', operation: 'profile', message: 'Updating profile...' })
+    
     try {
+      const token = getAccessToken();
+      if (!token || isTokenExpired(token)) {
+        throw new Error('Session expired. Please log in again.');
+      }
+
       const updateData = {
         username,
         currentPassword,
         newPassword: newPassword || undefined
       }
 
-      const response = await fetch('https://steth-backend.onrender.com/api/users/update-account', {
+      const response = await fetch('http://localhost:5000/api/users/update-account', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${AUTH_TOKEN}`
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify(updateData)
       })
@@ -184,7 +307,7 @@ export default function SettingsPage() {
       setStatus({ type: 'error', operation: 'profile', message: 'Failed to update profile' })
       toast({
         title: "Error",
-        description: "Failed to update account",
+        description: error instanceof Error ? error.message : "Failed to update account",
         variant: "destructive"
       })
     } finally {
@@ -218,8 +341,32 @@ export default function SettingsPage() {
     }
   }
 
-  if (!userData) {
-    return <div>Loading...</div>
+  // Show loading state while fetching profile
+  if (status.type === 'loading' && status.operation === 'profile' && !userData) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+          <p>Loading profile...</p>
+        </div>
+      </div>
+    )
+  }
+
+  // Show error state if no user data and error occurred
+  if (status.type === 'error' && status.operation === 'profile' && !userData) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center max-w-md">
+          <XCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
+          <h2 className="text-xl font-semibold mb-2">Unable to Load Profile</h2>
+          <p className="text-gray-600 mb-4">{status.message}</p>
+          <Button onClick={fetchUserProfile}>
+            Try Again
+          </Button>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -240,43 +387,47 @@ export default function SettingsPage() {
           <h3 className="text-lg font-medium mb-4">Account Settings</h3>
           <div className="space-y-6">
             {/* Profile Picture Upload */}
-            <div className="flex items-center space-x-4">
-              <div className="relative">
-                <img 
-                  src={userData.profilePicUrl} 
-                  alt="Profile" 
-                  className="h-20 w-20 rounded-full object-cover"
-                />
-              </div>
-              <div className="flex flex-col space-y-2">
-                <p className="text-sm font-medium">Profile Picture</p>
-                <div className="flex items-center space-x-2">
-                  <input
-                    id="profile-pic"
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={handleImageUpload}
+            {userData && (
+              <div className="flex items-center space-x-4">
+                <div className="relative">
+                  <img 
+                    src={userData.profilePicUrl} 
+                    alt="Profile" 
+                    className="h-20 w-20 rounded-full object-cover"
                   />
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => document.getElementById('profile-pic')?.click()}
-                    disabled={isUploadingImage}
-                  >
-                    {isUploadingImage ? "Uploading..." : "Upload New Picture"}
-                  </Button>
+                </div>
+                <div className="flex flex-col space-y-2">
+                  <p className="text-sm font-medium">Profile Picture</p>
+                  <div className="flex items-center space-x-2">
+                    <input
+                      id="profile-pic"
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={handleImageUpload}
+                    />
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => document.getElementById('profile-pic')?.click()}
+                      disabled={isUploadingImage}
+                    >
+                      {isUploadingImage ? "Uploading..." : "Upload New Picture"}
+                    </Button>
+                  </div>
                 </div>
               </div>
-            </div>
+            )}
 
             {/* Email (Read-only) */}
-            <div>
-              <Label>Email</Label>
-              <div className="mt-1 p-2 bg-muted rounded-md">
-                <p className="text-sm">{userData.email}</p>
+            {userData && (
+              <div>
+                <Label>Email</Label>
+                <div className="mt-1 p-2 bg-muted rounded-md">
+                  <p className="text-sm">{userData.email}</p>
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Username (Editable) */}
             <div>
