@@ -143,7 +143,9 @@ export default function SettingsPage() {
 
       console.log('Making API call with token:', token.substring(0, 20) + '...');
 
-      const response = await fetch('http://localhost:5000/file', {
+      // FIXED: Use the correct API endpoint and base URL
+      const response = await fetch('https://steth-backend.onrender.com/api/users/profile', {
+        method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -161,9 +163,11 @@ export default function SettingsPage() {
       const data = await response.json()
       console.log('API Response data:', data);
       
-      if (data.user) {
-        setUserData(data.user)
-        setUsername(data.user.username)
+      // FIXED: Handle different possible response structures
+      const user = data.user || data;
+      if (user && user.email) {
+        setUserData(user)
+        setUsername(user.username || '')
         setStatus({ type: 'success', operation: 'profile', message: 'Profile loaded successfully' })
       } else {
         throw new Error('No user data received from API')
@@ -195,7 +199,8 @@ export default function SettingsPage() {
         throw new Error('Session expired. Please log in again.');
       }
 
-      const response = await fetch('http://localhost:5000/api/users/upload-pic', {
+      // FIXED: Use the correct API base URL
+      const response = await fetch('https://steth-backend.onrender.com/api/users/upload-pic', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`
@@ -272,7 +277,8 @@ export default function SettingsPage() {
         newPassword: newPassword || undefined
       }
 
-      const response = await fetch('http://localhost:5000/api/users/update-account', {
+      // FIXED: Use the correct API base URL
+      const response = await fetch('https://steth-backend.onrender.com/api/users/update-account', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -361,9 +367,16 @@ export default function SettingsPage() {
           <XCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
           <h2 className="text-xl font-semibold mb-2">Unable to Load Profile</h2>
           <p className="text-gray-600 mb-4">{status.message}</p>
-          <Button onClick={fetchUserProfile}>
-            Try Again
-          </Button>
+          <div className="space-y-2">
+            <Button onClick={fetchUserProfile}>
+              Try Again
+            </Button>
+            <div className="text-sm text-gray-500">
+              <p>Debug Info:</p>
+              <p>Current token: {currentToken ? 'Present' : 'Missing'}</p>
+              <p>URL params: {window.location.search}</p>
+            </div>
+          </div>
         </div>
       </div>
     )
