@@ -57,9 +57,16 @@ export default function RootLayout({
   }
 
   const handleLogout = () => {
-    // Handle logout logic here
-    console.log("Logged out")
-    setShowLogout(false)
+    try {
+      // Clear token from localStorage
+      localStorage.removeItem('accessToken');
+      // Redirect to login page
+      window.location.href = 'https://stethset.com/login';
+    } catch (e: any) {
+      console.error('Error during logout:', e.message);
+      // Force redirect even if localStorage fails
+      window.location.href = 'https://stethset.com/login';
+    }
   }
 
   return (
@@ -136,7 +143,7 @@ export default function RootLayout({
                     Newsletter
                   </Button>
                 </Link>
-                <Link href="/settings" passHref>
+                {/* <Link href="/settings" passHref>
                   <Button 
                     variant={isActivePath("/settings") ? "default" : "ghost"} 
                     className="w-full justify-start gap-2"
@@ -144,8 +151,7 @@ export default function RootLayout({
                     <Settings className="h-4 w-4" />
                     Settings
                   </Button>
-                </Link>
-                {/* Logout button at bottom of sidebar */}
+                </Link>*/}
                 <div className="px-2 pb-4 mt-auto">
                   <Button 
                     variant="ghost" 
@@ -155,7 +161,7 @@ export default function RootLayout({
                     <LogOut className="h-4 w-4" />
                     Logout
                   </Button>
-                </div>
+                </div> 
               </nav>
             </aside>
             <main className="p-6">
@@ -170,7 +176,7 @@ export default function RootLayout({
                     pathname === "/settings" ? "Settings" : ""}
                   </h1>
                 </div>
-                <div className="relative">
+                {/* <div className="relative">
                   {isLoading ? (
                     <div className="h-10 w-10 rounded-full bg-gray-700 animate-pulse" />
                   ) : (
@@ -191,7 +197,7 @@ export default function RootLayout({
                       </button>
                     </div>
                   )}
-                </div>
+                </div> */}
               </div>
               {children}
             </main>

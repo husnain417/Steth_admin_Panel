@@ -141,7 +141,7 @@ export default function SettingsPage() {
       
       const existingToken = localStorage.getItem('accessToken');
       console.log('Existing token in localStorage:', existingToken ? 'Found' : 'Not found');
-    } catch (e: any) {
+    } catch (e) {
       console.log('localStorage access blocked:', e.message);
     }
     
