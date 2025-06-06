@@ -57,10 +57,9 @@ export default function SettingsPage() {
     return decoded?.exp && decoded.exp * 1000 < Date.now();
   };
 
-  // Get access token with improved cross-origin handling
   const getAccessToken = () => {
     if (typeof window !== 'undefined') {
-      // First check URL parameters (priority for cross-origin)
+      // PRIORITY 1: Check URL parameters FIRST (for cross-origin)
       const urlParams = new URLSearchParams(window.location.search);
       const tokenFromUrl = urlParams.get('token');
       
@@ -74,14 +73,15 @@ export default function SettingsPage() {
             // Store in memory for this session
             setCurrentToken(decodedToken);
             
-            // Also try to store in localStorage (may fail in cross-origin)
+            // Try to store in localStorage (may fail in cross-origin)
             try {
               localStorage.setItem('accessToken', decodedToken);
+              console.log('Token saved to localStorage successfully');
             } catch (e) {
               console.warn('Could not store token in localStorage (cross-origin):', e);
             }
             
-            // Clean up URL by removing token parameter
+            // Clean up URL AFTER storing token
             const newUrl = new URL(window.location.href);
             newUrl.searchParams.delete('token');
             window.history.replaceState({}, document.title, newUrl.toString());
@@ -95,15 +95,17 @@ export default function SettingsPage() {
         }
       }
       
-      // If we have a token in state, use it
+      // PRIORITY 2: Check memory state
       if (currentToken && !isTokenExpired(currentToken)) {
+        console.log('Using token from memory state');
         return currentToken;
       }
       
-      // Fallback to localStorage (may not work in cross-origin)
+      // PRIORITY 3: Fallback to localStorage (may not work in cross-origin)
       try {
         const localToken = localStorage.getItem('accessToken');
         if (localToken && !isTokenExpired(localToken)) {
+          console.log('Using token from localStorage');
           setCurrentToken(localToken);
           return localToken;
         }
@@ -111,10 +113,40 @@ export default function SettingsPage() {
         console.warn('Could not access localStorage (cross-origin):', e);
       }
     }
+    
+    console.error('No valid token found anywhere');
     return '';
   }
 
   useEffect(() => {
+    // Debug token retrieval
+    console.log('=== DEBUG TOKEN RETRIEVAL ===');
+    console.log('Current URL:', window.location.href);
+    console.log('URL Search Params:', window.location.search);
+    
+    const urlParams = new URLSearchParams(window.location.search);
+    const tokenFromUrl = urlParams.get('token');
+    console.log('Raw token from URL:', tokenFromUrl);
+    
+    if (tokenFromUrl) {
+      const decodedToken = decodeURIComponent(tokenFromUrl);
+      console.log('Decoded token length:', decodedToken.length);
+      console.log('Token preview:', decodedToken.substring(0, 50) + '...');
+    }
+    
+    // Check localStorage access
+    try {
+      const testStorage = localStorage.getItem('test');
+      console.log('localStorage accessible:', true);
+      
+      const existingToken = localStorage.getItem('accessToken');
+      console.log('Existing token in localStorage:', existingToken ? 'Found' : 'Not found');
+    } catch (e: any) {
+      console.log('localStorage access blocked:', e.message);
+    }
+    
+    console.log('=== END DEBUG ===');
+    
     // Initialize token and fetch profile
     const token = getAccessToken();
     if (token) {
