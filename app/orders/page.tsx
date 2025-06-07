@@ -228,13 +228,13 @@ export default function OrdersPage() {
                     </div>
                   ))}
                 </TableCell>
-                <TableCell>${order.total.toFixed(2)}</TableCell>
+                <TableCell>Rs.{order.total.toFixed(2)}</TableCell>
                 <TableCell>
                   {getPaymentMethodDisplay(order.paymentMethod, order)}
                 </TableCell>
                 <TableCell>
-                  <span className={`px-2 py-1 rounded-full text-xs ${getStatusColor(order.status)}`}>
-                    {order.status}
+                  <span className={`px-2 py-1 rounded-full text-xs ${getStatusColor(order.orderStatus)}`}>
+                    {order.orderStatus}
                   </span>
                 </TableCell>
                 <TableCell>{formatDate(order.createdAt)}</TableCell>
