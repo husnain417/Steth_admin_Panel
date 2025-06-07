@@ -24,7 +24,6 @@ export default function SettingsPage() {
   const [passwordError, setPasswordError] = useState("")
   const [isLoading, setIsLoading] = useState(false)
   const [isUploadingImage, setIsUploadingImage] = useState(false)
-  const [currentToken, setCurrentToken] = useState<string>("")
   const [status, setStatus] = useState<{
     type: 'idle' | 'loading' | 'success' | 'error';
     operation: 'profile' | 'image' | 'none';
@@ -39,163 +38,28 @@ export default function SettingsPage() {
   const [showNewPassword, setShowNewPassword] = useState(false)
   const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
-  // Helper function to decode JWT (without verification)
-  const decodeJWT = (token: string) => {
-    try {
-      const base64Url = token.split('.')[1];
-      const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-      return JSON.parse(atob(base64));
-    } catch (e) {
-      return null;
-    }
-  };
-
-  // Check if token is expired
-  const isTokenExpired = (token: string) => {
-    if (!token) return true;
-    const decoded = decodeJWT(token);
-    return decoded?.exp && decoded.exp * 1000 < Date.now();
-  };
-
-  const getAccessToken = () => {
-    if (typeof window !== 'undefined') {
-      // PRIORITY 1: Check URL parameters FIRST (for cross-origin)
-      const urlParams = new URLSearchParams(window.location.search);
-      const tokenFromUrl = urlParams.get('token');
-      
-      if (tokenFromUrl) {
-        try {
-          const decodedToken = decodeURIComponent(tokenFromUrl);
-          console.log('Token found in URL:', decodedToken.substring(0, 20) + '...');
-          
-          // Validate token is not expired
-          if (!isTokenExpired(decodedToken)) {
-            // Store in memory for this session
-            setCurrentToken(decodedToken);
-            
-            // Try to store in localStorage (may fail in cross-origin)
-            try {
-              localStorage.setItem('accessToken', decodedToken);
-              console.log('Token saved to localStorage successfully');
-            } catch (e) {
-              console.warn('Could not store token in localStorage (cross-origin):', e);
-            }
-            
-            // Clean up URL AFTER storing token
-            const newUrl = new URL(window.location.href);
-            newUrl.searchParams.delete('token');
-            window.history.replaceState({}, document.title, newUrl.toString());
-            
-            return decodedToken;
-          } else {
-            console.error('Token from URL is expired');
-          }
-        } catch (error) {
-          console.error('Error decoding token from URL:', error);
-        }
-      }
-      
-      // PRIORITY 2: Check memory state
-      if (currentToken && !isTokenExpired(currentToken)) {
-        console.log('Using token from memory state');
-        return currentToken;
-      }
-      
-      // PRIORITY 3: Fallback to localStorage (may not work in cross-origin)
-      try {
-        const localToken = localStorage.getItem('accessToken');
-        if (localToken && !isTokenExpired(localToken)) {
-          console.log('Using token from localStorage');
-          setCurrentToken(localToken);
-          return localToken;
-        }
-      } catch (e) {
-        console.warn('Could not access localStorage (cross-origin):', e);
-      }
-    }
-    
-    console.error('No valid token found anywhere');
-    return '';
-  }
-
   useEffect(() => {
-    // Debug token retrieval
-    console.log('=== DEBUG TOKEN RETRIEVAL ===');
-    console.log('Current URL:', window.location.href);
-    console.log('URL Search Params:', window.location.search);
-    
-    const urlParams = new URLSearchParams(window.location.search);
-    const tokenFromUrl = urlParams.get('token');
-    console.log('Raw token from URL:', tokenFromUrl);
-    
-    if (tokenFromUrl) {
-      const decodedToken = decodeURIComponent(tokenFromUrl);
-      console.log('Decoded token length:', decodedToken.length);
-      console.log('Token preview:', decodedToken.substring(0, 50) + '...');
-    }
-    
-    // Check localStorage access
-    try {
-      const testStorage = localStorage.getItem('test');
-      console.log('localStorage accessible:', true);
-      
-      const existingToken = localStorage.getItem('accessToken');
-      console.log('Existing token in localStorage:', existingToken ? 'Found' : 'Not found');
-    } catch (e) {
-      console.log('localStorage access blocked:', e.message);
-    }
-    
-    console.log('=== END DEBUG ===');
-    
-    // Initialize token and fetch profile
-    const token = getAccessToken();
-    if (token) {
-      fetchUserProfile();
-    } else {
-      setStatus({ 
-        type: 'error', 
-        operation: 'profile', 
-        message: 'No valid access token found. Please log in again.' 
-      });
-    }
+    fetchUserProfile();
   }, [])
 
   const fetchUserProfile = async () => {
     try {
       setStatus({ type: 'loading', operation: 'profile', message: 'Fetching profile data...' })
       
-      const token = getAccessToken();
-      if (!token) {
-        throw new Error('No access token found');
-      }
-
-      if (isTokenExpired(token)) {
-        throw new Error('Session expired');
-      }
-
-      console.log('Making API call with token:', token.substring(0, 20) + '...');
-
-      // FIXED: Use the correct API endpoint and base URL
-      const response = await fetch('https://steth-backend.onrender.com/api/users/profile', {
+      const response = await fetch('https://steth-backend.onrender.com/api/users/profile-admin', {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
         }
       })
       
-      console.log('API Response status:', response.status);
-      
       if (!response.ok) {
         const errorText = await response.text();
-        console.error('API Error Response:', errorText);
         throw new Error(`HTTP ${response.status}: ${errorText}`);
       }
       
       const data = await response.json()
-      console.log('API Response data:', data);
       
-      // FIXED: Handle different possible response structures
       const user = data.user || data;
       if (user && user.email) {
         setUserData(user)
@@ -226,17 +90,8 @@ export default function SettingsPage() {
     formData.append('profilePicture', file)
     
     try {
-      const token = getAccessToken();
-      if (!token || isTokenExpired(token)) {
-        throw new Error('Session expired. Please log in again.');
-      }
-
-      // FIXED: Use the correct API base URL
       const response = await fetch('https://steth-backend.onrender.com/api/users/upload-pic', {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        },
         body: formData
       })
       const data = await response.json()
@@ -298,23 +153,16 @@ export default function SettingsPage() {
     setStatus({ type: 'loading', operation: 'profile', message: 'Updating profile...' })
     
     try {
-      const token = getAccessToken();
-      if (!token || isTokenExpired(token)) {
-        throw new Error('Session expired. Please log in again.');
-      }
-
       const updateData = {
         username,
         currentPassword,
         newPassword: newPassword || undefined
       }
 
-      // FIXED: Use the correct API base URL
       const response = await fetch('https://steth-backend.onrender.com/api/users/update-account', {
         method: 'PUT',
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
+          'Content-Type': 'application/json'
         },
         body: JSON.stringify(updateData)
       })
@@ -399,16 +247,9 @@ export default function SettingsPage() {
           <XCircle className="h-12 w-12 text-red-500 mx-auto mb-4" />
           <h2 className="text-xl font-semibold mb-2">Unable to Load Profile</h2>
           <p className="text-gray-600 mb-4">{status.message}</p>
-          <div className="space-y-2">
-            <Button onClick={fetchUserProfile}>
-              Try Again
-            </Button>
-            <div className="text-sm text-gray-500">
-              <p>Debug Info:</p>
-              <p>Current token: {currentToken ? 'Present' : 'Missing'}</p>
-              <p>URL params: {window.location.search}</p>
-            </div>
-          </div>
+          <Button onClick={fetchUserProfile}>
+            Try Again
+          </Button>
         </div>
       </div>
     )

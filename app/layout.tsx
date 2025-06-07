@@ -9,7 +9,6 @@ import { Inter } from "next/font/google"
 import "@/styles/globals.css"
 
 const inter = Inter({ subsets: ["latin"] })
-const AUTH_TOKEN = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjY4MDY2YWI0M2JlMjJkMzA3MWFhY2FiMCIsInVzZXJuYW1lIjoiYWRtaW4xIiwiZW1haWwiOiJhZG1pbkBleGFtcGxlLmNvbSIsImlhdCI6MTc0NTg3MTAwOSwiZXhwIjoxNzQ1ODg5MDA5fQ.R7nPOFK4JsxiuULIDRhP1JhO0nvveWmHYZuITxx4rBw"
 
 interface UserData {
   _id: string;
@@ -31,14 +30,25 @@ export default function RootLayout({
   useEffect(() => {
     const fetchUserProfile = async () => {
       try {
-        const response = await fetch('https://steth-backend.onrender.com/api/users/profile', {
+        const response = await fetch('https://steth-backend.onrender.com/api/users/profile-admin', {
+          method: 'GET',
           headers: {
-            'Authorization': `Bearer ${AUTH_TOKEN}`
+            'Content-Type': 'application/json'
           }
         })
+        
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: Failed to fetch profile`);
+        }
+        
         const data = await response.json()
-        if (data.user) {
-          setUserData(data.user)
+        
+        // Handle different possible response structures
+        const user = data.user || data;
+        if (user && user.email) {
+          setUserData(user)
+        } else {
+          console.error('No user data received from API')
         }
       } catch (error) {
         console.error("Error fetching user profile:", error)
@@ -143,7 +153,7 @@ export default function RootLayout({
                     Newsletter
                   </Button>
                 </Link>
-                {/* <Link href="/settings" passHref>
+                <Link href="/settings" passHref>
                   <Button 
                     variant={isActivePath("/settings") ? "default" : "ghost"} 
                     className="w-full justify-start gap-2"
@@ -151,7 +161,7 @@ export default function RootLayout({
                     <Settings className="h-4 w-4" />
                     Settings
                   </Button>
-                </Link>*/}
+                </Link>
                 <div className="px-2 pb-4 mt-auto">
                   <Button 
                     variant="ghost" 
@@ -176,7 +186,7 @@ export default function RootLayout({
                     pathname === "/settings" ? "Settings" : ""}
                   </h1>
                 </div>
-                {/* <div className="relative">
+                <div className="relative">
                   {isLoading ? (
                     <div className="h-10 w-10 rounded-full bg-gray-700 animate-pulse" />
                   ) : (
@@ -187,7 +197,7 @@ export default function RootLayout({
                       onClick={() => setShowLogout(!showLogout)}
                     />
                   )}
-                  {showLogout && (
+                  {/* {showLogout && (
                     <div className="absolute z-10 right-0 mt-2 w-32 bg-white text-black rounded-md shadow-lg">
                       <button 
                         className="block w-full px-4 py-2 text-left hover:bg-gray-100"
@@ -196,8 +206,8 @@ export default function RootLayout({
                         Logout
                       </button>
                     </div>
-                  )}
-                </div> */}
+                  )} */}
+                </div>
               </div>
               {children}
             </main>
