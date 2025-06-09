@@ -15,7 +15,7 @@ type Color = {
 }
 
 type ResponseMessage = {
-
+  text: string;
   type: 'success' | 'error';
 }
 
@@ -65,9 +65,21 @@ export default function UpdateProductImagesPage() {
   const handleColorImageChange = (color: string, files: FileList | null) => {
     if (files) {
       const fileArray = Array.from(files);
+      
+      // Check total number of images
       if (fileArray.length + (colorImages[color]?.length || 0) > 10) {
         setResponseMessage({ 
           text: "Maximum 10 images allowed per color", 
+          type: 'error' 
+        });
+        return;
+      }
+
+      // Check file size for each image
+      const oversizedFiles = fileArray.filter(file => file.size > 10 * 1024 * 1024); // 10MB in bytes
+      if (oversizedFiles.length > 0) {
+        setResponseMessage({ 
+          text: "Some images exceed the 10MB size limit. Please select smaller images.", 
           type: 'error' 
         });
         return;
@@ -190,6 +202,12 @@ export default function UpdateProductImagesPage() {
 
       <Card className="p-6">
         <div className="space-y-6">
+          <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+            <p className="text-sm text-yellow-800">
+              Note: Each image should not exceed 10MB in size. Maximum 10 images allowed per color.
+            </p>
+          </div>
+
           {newColors.map((color) => (
             <div key={color.name} className="space-y-4">
               <div className="flex items-center gap-2">
@@ -215,6 +233,9 @@ export default function UpdateProductImagesPage() {
                     <span className="bg-gray-100 text-black px-3 py-1 rounded">Choose files</span>
                   </div>
                 </div>
+                <p className="text-sm text-gray-500">
+                  {(colorImages[color.name]?.length || 0)}/10 images selected
+                </p>
                 {colorImages[color.name]?.length > 0 && (
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mt-4">
                     {colorImages[color.name].map((image, index) => (
