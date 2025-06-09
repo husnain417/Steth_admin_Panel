@@ -298,6 +298,11 @@ export default function ProductImagesPage() {
           {/* Default Images Section */}
           <div className="space-y-4">
             <h2 className="text-lg font-semibold">Default Images</h2>
+            <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+              <p className="text-sm text-yellow-800">
+                Note: Each image should not exceed 10MB in size. Maximum 10 images allowed.
+              </p>
+            </div>
             <div className="space-y-2">
               <Label htmlFor="default-images">Upload default product images (max 10)</Label>
               <div className="flex items-center gap-2">
@@ -368,6 +373,11 @@ export default function ProductImagesPage() {
           {/* Color Images Section */}
           <div className="space-y-4">
             <h2 className="text-lg font-semibold">Color-Specific Images</h2>
+            <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+              <p className="text-sm text-yellow-800">
+                Note: Each image should not exceed 10MB in size. Maximum 10 images allowed per color.
+              </p>
+            </div>
             {productData.colors.map((color) => (
               <div key={color._id} className="space-y-2">
                 <Label htmlFor={`color-${color._id}`}>{color.name} Images (max 10)</Label>
