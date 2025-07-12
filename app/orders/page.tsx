@@ -52,7 +52,8 @@ type Order = {
   total: number
   paymentMethod: "cash-on-delivery" | "bank-transfer"
   paymentReceipt?: PaymentReceipt
-  status: string
+  paymentStatus: string
+  orderStatus: string
   isFirstOrder: boolean
   createdAt: string
   updatedAt: string
@@ -241,7 +242,7 @@ export default function OrdersPage() {
                 <TableCell>
                   <Link href={`/orders/${order._id}/update-status`}>
                     <Button variant="outline" size="sm">
-                      Update Status
+                      Details
                     </Button>
                   </Link>
                 </TableCell>

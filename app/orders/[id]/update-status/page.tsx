@@ -14,18 +14,61 @@ import {
 import { ArrowLeft, Loader2 } from "lucide-react"
 import Link from "next/link"
 
-type Order = {
+type OrderItem = {
+  product: {
+    _id: string;
+    name: string;
+  };
+  productName: string;
+  color: string;
+  size: string;
+  quantity: number;
+  price: number;
   _id: string;
-  status: string;
-  user: {
-    email: string;
-  };
-  shippingAddress: {
-    fullName: string;
-  };
 }
 
-const statusOptions = ['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled'];
+type ShippingAddress = {
+  fullName: string;
+  addressLine1: string;
+  addressLine2: string;
+  city: string;
+  state: string;
+  postalCode: string;
+  country: string;
+  phoneNumber: string;
+}
+
+type PaymentReceipt = {
+  url: string;
+  public_id: string;
+  uploaded: boolean;
+}
+
+type Order = {
+  _id: string;
+  user: {
+    _id: string;
+    email: string;
+  };
+  items: OrderItem[];
+  shippingAddress: ShippingAddress;
+  subtotal: number;
+  discount: number;
+  discountCode: string;
+  shippingCharges: number;
+  total: number;
+  pointsUsed: number;
+  pointsEarned: number;
+  paymentMethod: "cash-on-delivery" | "bank-transfer";
+  paymentReceipt?: PaymentReceipt;
+  paymentStatus: string;
+  orderStatus: string;
+  isFirstOrder: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+const statusOptions = ['pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled'];
 
 export default function UpdateOrderStatusPage() {
   const { id } = useParams();
@@ -51,7 +94,7 @@ export default function UpdateOrderStatusPage() {
         const foundOrder = data.orders.find((order: Order) => order._id === id);
         if (foundOrder) {
           setOrder(foundOrder);
-          setSelectedStatus(foundOrder.status);
+          setSelectedStatus(foundOrder.orderStatus);
         } else {
           setError('Order not found');
         }
@@ -73,8 +116,8 @@ export default function UpdateOrderStatusPage() {
     
     setUpdating(true);
     try {
-      console.log('Making PUT request to:', `https://steth-backend.onrender.com/api/orders/update-status/${id}`);
-      const response = await fetch(`https://steth-backend.onrender.com/api/orders/update-status/${id}`, {
+      console.log('Making PUT request to:', `http://localhost:5000/api/orders/update-status/${id}`);
+      const response = await fetch(`http://localhost:5000/api/orders/update-status/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -151,53 +194,184 @@ export default function UpdateOrderStatusPage() {
         </div>
       </div>
 
-      <Card className="p-6">
-        <div className="space-y-4">
-          <div>
-            <h2 className="text-lg font-medium">Order Details</h2>
-            <p className="text-sm text-gray-500">Order ID: {order._id}</p>
-            <p className="text-sm text-gray-500">Customer: {order.shippingAddress.fullName}</p>
-            <p className="text-sm text-gray-500">Email: {order.user.email}</p>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Order Information */}
+        <Card className="p-6">
+          <h2 className="text-lg font-medium mb-4">Order Information</h2>
+          <div className="space-y-3">
+            <div>
+              <span className="text-sm font-medium text-gray-500">Order ID:</span>
+              <p className="text-sm">{order._id}</p>
+            </div>
+            <div>
+              <span className="text-sm font-medium text-gray-500">Order Date:</span>
+              <p className="text-sm">{new Date(order.createdAt).toLocaleDateString()}</p>
+            </div>
+            <div>
+              <span className="text-sm font-medium text-gray-500">Last Updated:</span>
+              <p className="text-sm">{new Date(order.updatedAt).toLocaleDateString()}</p>
+            </div>
+            <div>
+              <span className="text-sm font-medium text-gray-500">First Order:</span>
+              <p className="text-sm">{order.isFirstOrder ? 'Yes' : 'No'}</p>
+            </div>
           </div>
+        </Card>
 
+        {/* Customer Information */}
+        <Card className="p-6">
+          <h2 className="text-lg font-medium mb-4">Customer Information</h2>
+          <div className="space-y-3">
+            <div>
+              <span className="text-sm font-medium text-gray-500">Name:</span>
+              <p className="text-sm">{order.shippingAddress.fullName}</p>
+            </div>
+            <div>
+              <span className="text-sm font-medium text-gray-500">Email:</span>
+              <p className="text-sm">{order.user.email}</p>
+            </div>
+            <div>
+              <span className="text-sm font-medium text-gray-500">Phone:</span>
+              <p className="text-sm">{order.shippingAddress.phoneNumber}</p>
+            </div>
+          </div>
+        </Card>
+
+        {/* Shipping Address */}
+        <Card className="p-6">
+          <h2 className="text-lg font-medium mb-4">Shipping Address</h2>
           <div className="space-y-2">
-            <label className="text-sm font-medium">Current Status</label>
-            <p className="text-sm text-gray-500">{order.status}</p>
+            <p className="text-sm">{order.shippingAddress.addressLine1}</p>
+            {order.shippingAddress.addressLine2 && (
+              <p className="text-sm">{order.shippingAddress.addressLine2}</p>
+            )}
+            <p className="text-sm">
+              {order.shippingAddress.city}, {order.shippingAddress.state} {order.shippingAddress.postalCode}
+            </p>
+            <p className="text-sm">{order.shippingAddress.country}</p>
           </div>
+        </Card>
 
+        {/* Payment Information */}
+        <Card className="p-6">
+          <h2 className="text-lg font-medium mb-4">Payment Information</h2>
+          <div className="space-y-3">
+            <div>
+              <span className="text-sm font-medium text-gray-500">Payment Method:</span>
+              <p className="text-sm capitalize">{order.paymentMethod.replace('-', ' ')}</p>
+            </div>
+
+            {order.paymentReceipt && (
+              <div>
+                <span className="text-sm font-medium text-gray-500">Payment Receipt:</span>
+                <p className="text-sm text-blue-600">
+                  <a href={order.paymentReceipt.url} target="_blank" rel="noopener noreferrer">
+                    View Receipt
+                  </a>
+                </p>
+              </div>
+            )}
+          </div>
+        </Card>
+
+        {/* Order Items */}
+        <Card className="p-6 lg:col-span-2">
+          <h2 className="text-lg font-medium mb-4">Order Items</h2>
+          <div className="space-y-4">
+            {order.items.map((item, index) => (
+              <div key={item._id} className="border-b pb-4 last:border-b-0">
+                <div className="flex justify-between items-start">
+                  <div className="flex-1">
+                    <h3 className="font-medium">{item.productName}</h3>
+                    <p className="text-sm text-gray-500">
+                      Color: {item.color} | Size: {item.size} | Quantity: {item.quantity}
+                    </p>
+                    <p className="text-sm text-gray-500">Product ID: {item.product._id}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-medium">Rs. {item.price.toFixed(2)}</p>
+                    <p className="text-sm text-gray-500">Total: Rs. {(item.price * item.quantity).toFixed(2)}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+
+        {/* Order Summary */}
+        <Card className="p-6 lg:col-span-2">
+          <h2 className="text-lg font-medium mb-4">Order Summary</h2>
           <div className="space-y-2">
-            <label className="text-sm font-medium">New Status</label>
-            <Select value={selectedStatus} onValueChange={setSelectedStatus}>
-              <SelectTrigger>
-                <SelectValue placeholder="Select status" />
-              </SelectTrigger>
-              <SelectContent>
-                {statusOptions.map((status) => (
-                  <SelectItem key={status} value={status}>
-                    {status}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="flex justify-between">
+              <span>Subtotal:</span>
+              <span>Rs. {order.subtotal.toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Discount ({order.discountCode}):</span>
+              <span>-Rs. {order.discount.toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Shipping Charges:</span>
+              <span>Rs. {order.shippingCharges.toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Points Used:</span>
+              <span>{order.pointsUsed}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Points Earned:</span>
+              <span>{order.pointsEarned}</span>
+            </div>
+            <div className="flex justify-between font-bold text-lg border-t pt-2">
+              <span>Total:</span>
+              <span>Rs. {order.total.toFixed(2)}</span>
+            </div>
           </div>
+        </Card>
 
-          <div className="flex justify-end">
-            <Button 
-              onClick={handleStatusUpdate}
-              disabled={updating || selectedStatus === order.status}
-            >
-              {updating ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Updating...
-                </>
-              ) : (
-                'Update Status'
-              )}
-            </Button>
+        {/* Status Update */}
+        <Card className="p-6 lg:col-span-2">
+          <h2 className="text-lg font-medium mb-4">Update Order Status</h2>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Current Status</label>
+              <p className="text-sm text-gray-500 capitalize">{order.orderStatus}</p>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium">New Status</label>
+              <Select value={selectedStatus} onValueChange={setSelectedStatus}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent>
+                  {statusOptions.map((status) => (
+                    <SelectItem key={status} value={status}>
+                      {status}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="flex justify-end">
+              <Button 
+                onClick={handleStatusUpdate}
+                disabled={updating || selectedStatus === order.orderStatus}
+              >
+                {updating ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Updating...
+                  </>
+                ) : (
+                  'Update Status'
+                )}
+              </Button>
+            </div>
           </div>
-        </div>
-      </Card>
+        </Card>
+      </div>
     </div>
   );
 } 
