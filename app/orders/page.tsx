@@ -38,7 +38,7 @@ type PaymentReceipt = {
 
 type Order = {
   _id: string
-  user: {
+  user?: {
     _id: string
     email: string
   }
@@ -55,28 +55,81 @@ type Order = {
   paymentStatus: string
   orderStatus: string
   isFirstOrder: boolean
+  customerEmail?: string  // Added customerEmail field
+  email?: string          // Added processed email field from backend
   createdAt: string
   updatedAt: string
+}
+
+type PaginationInfo = {
+  currentPage: number
+  totalPages: number
+  total: number
+  count: number
 }
 
 export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [pagination, setPagination] = useState<PaginationInfo>({
+    currentPage: 1,
+    totalPages: 1,
+    total: 0,
+    count: 0
+  })
+
+  // Filter state (optional - you can add filters later)
+  const [statusFilter, setStatusFilter] = useState<string>("")
 
   useEffect(() => {
-    fetchOrders()
-  }, [])
+    fetchOrders(1, true) // Fetch first page and reset orders
+  }, [statusFilter])
 
-  const fetchOrders = async () => {
+  const fetchOrders = async (page: number = 1, reset: boolean = false) => {
     try {
-      const response = await fetch("https://steth-backend.onrender.com/api/orders/all")
+      if (reset) {
+        setLoading(true)
+      } else {
+        setLoadingMore(true)
+      }
+
+      // Build query parameters
+      const params = new URLSearchParams({
+        page: page.toString(),
+        limit: "10", // You can make this configurable
+      })
+
+      if (statusFilter) {
+        params.append("status", statusFilter)
+      }
+
+      const response = await fetch(`https://steth-backend.onrender.com/api/orders/all?${params.toString()}`)
+      
       if (!response.ok) {
         throw new Error("Failed to fetch orders")
       }
+      
       const data = await response.json()
+      
       if (data.success) {
-        setOrders(data.orders)
+        if (reset) {
+          // Replace orders for first page or filter change
+          setOrders(data.orders)
+        } else {
+          // Append orders for "Load More"
+          setOrders(prevOrders => [...prevOrders, ...data.orders])
+        }
+        
+        setPagination({
+          currentPage: data.currentPage,
+          totalPages: data.totalPages,
+          total: data.total,
+          count: data.count
+        })
+        
+        setError(null)
       } else {
         setError("Failed to load orders")
       }
@@ -85,6 +138,13 @@ export default function OrdersPage() {
       console.error("Error fetching orders:", error)
     } finally {
       setLoading(false)
+      setLoadingMore(false)
+    }
+  }
+
+  const handleLoadMore = () => {
+    if (pagination.currentPage < pagination.totalPages && !loadingMore) {
+      fetchOrders(pagination.currentPage + 1, false)
     }
   }
 
@@ -167,6 +227,23 @@ export default function OrdersPage() {
     }
   }
 
+  // Function to get email with priority logic (fallback for older data)
+  const getOrderEmail = (order: Order) => {
+    // If backend provides processed email, use it
+    if (order.email !== undefined) {
+      return order.email
+    }
+    
+    // Fallback: implement priority logic on frontend for older data
+    if (order.customerEmail) {
+      return order.customerEmail
+    } else if (order.user?.email) {
+      return order.user.email
+    }
+    
+    return null
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -183,6 +260,8 @@ export default function OrdersPage() {
     )
   }
 
+  const hasMoreOrders = pagination.currentPage < pagination.totalPages
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -195,7 +274,31 @@ export default function OrdersPage() {
           </Link>
           <h1 className="text-2xl font-bold">Orders</h1>
         </div>
+        
+        {/* Pagination Info */}
+        <div className="text-sm text-gray-600">
+          Showing {orders.length} of {pagination.total} orders
+        </div>
       </div>
+
+      {/* Optional: Status Filter */}
+      {/* <Card className="p-4">
+        <div className="flex items-center gap-4">
+          <label className="text-sm font-medium">Filter by Status:</label>
+          <select 
+            value={statusFilter}
+            onChange={(e) => setStatusFilter(e.target.value)}
+            className="px-3 py-1 border rounded-md text-sm"
+          >
+            <option value="">All Orders</option>
+            <option value="pending">Pending</option>
+            <option value="processing">Processing</option>
+            <option value="shipped">Shipped</option>
+            <option value="delivered">Delivered</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+        </div>
+      </Card> */}
 
       <Card className="p-6">
         <Table>
@@ -212,44 +315,85 @@ export default function OrdersPage() {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {orders.map((order) => (
-              <TableRow key={order._id}>
-                <TableCell className="font-medium">{order._id.slice(-6)}</TableCell>
-                <TableCell>
-                  <div>
-                    <div>{order.shippingAddress.fullName}</div>
-                    <div className="text-sm text-gray-500">{order.user.email}</div>
-                  </div>
-                </TableCell>
-                <TableCell>
-                  {order.items.map((item, index) => (
-                    <div key={item._id} className="text-sm">
-                      {item.quantity}x {item.productName || ""} - {item.color} ({item.size})
-                      {index < order.items.length - 1 && ", "}
+            {orders.map((order) => {
+              const orderEmail = getOrderEmail(order)
+              
+              return (
+                <TableRow key={order._id}>
+                  <TableCell className="font-medium">{order._id.slice(-6)}</TableCell>
+                  <TableCell>
+                    <div>
+                      <div>{order.shippingAddress?.fullName || "N/A"}</div>
+                      <div className="text-sm text-gray-500">
+                        {orderEmail || "No email provided"}
+                      </div>
                     </div>
-                  ))}
-                </TableCell>
-                <TableCell>Rs.{order.total.toFixed(2)}</TableCell>
-                <TableCell>
-                  {getPaymentMethodDisplay(order.paymentMethod, order)}
-                </TableCell>
-                <TableCell>
-                  <span className={`px-2 py-1 rounded-full text-xs ${getStatusColor(order.orderStatus)}`}>
-                    {order.orderStatus}
-                  </span>
-                </TableCell>
-                <TableCell>{formatDate(order.createdAt)}</TableCell>
-                <TableCell>
-                  <Link href={`/orders/${order._id}/update-status`}>
-                    <Button variant="outline" size="sm">
-                      Details
-                    </Button>
-                  </Link>
-                </TableCell>
-              </TableRow>
-            ))}
+                  </TableCell>
+                  <TableCell>
+                    {order.items?.map((item, index) => (
+                      <div key={item._id || index} className="text-sm">
+                        {item.quantity || 0}x {item.productName || "Unknown Product"} - {item.color || "N/A"} ({item.size || "N/A"})
+                        {index < order.items.length - 1 && ", "}
+                      </div>
+                    )) || <span className="text-gray-500">No items</span>}
+                  </TableCell>
+                  <TableCell>Rs.{(order.total || 0).toFixed(2)}</TableCell>
+                  <TableCell>
+                    {getPaymentMethodDisplay(order.paymentMethod, order)}
+                  </TableCell>
+                  <TableCell>
+                    <span className={`px-2 py-1 rounded-full text-xs ${getStatusColor(order.orderStatus || "unknown")}`}>
+                      {order.orderStatus || "Unknown"}
+                    </span>
+                  </TableCell>
+                  <TableCell>{order.createdAt ? formatDate(order.createdAt) : "N/A"}</TableCell>
+                  <TableCell>
+                    <Link href={`/orders/${order._id}/update-status`}>
+                      <Button variant="outline" size="sm">
+                        Details
+                      </Button>
+                    </Link>
+                  </TableCell>
+                </TableRow>
+              )
+            })}
           </TableBody>
         </Table>
+
+        {/* Load More Button */}
+        {hasMoreOrders && (
+          <div className="flex justify-center mt-6">
+            <Button 
+              onClick={handleLoadMore}
+              disabled={loadingMore}
+              variant="outline"
+              className="min-w-32"
+            >
+              {loadingMore ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Loading...
+                </>
+              ) : (
+                `Load More Orders (${pagination.total - orders.length} remaining)`
+              )}
+            </Button>
+          </div>
+        )}
+
+        {/* No more orders message */}
+        {orders.length > 0 && !hasMoreOrders && (
+          <div className="text-center mt-6 text-sm text-gray-500">
+            All orders loaded ({pagination.total} total)
+          </div>
+        )}
+
+        {/* Empty state */}
+        {orders.length === 0 && !loading && (
+          <div className="text-center py-8 text-gray-500">
+            No orders found
+          </div>
+        )}
       </Card>
     </div>
   )

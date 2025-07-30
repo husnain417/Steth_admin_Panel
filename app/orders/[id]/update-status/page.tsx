@@ -46,7 +46,7 @@ type PaymentReceipt = {
 
 type Order = {
   _id: string;
-  user: {
+  user?: {
     _id: string;
     email: string;
   };
@@ -64,6 +64,8 @@ type Order = {
   paymentStatus: string;
   orderStatus: string;
   isFirstOrder: boolean;
+  customerEmail?: string;  // Added customerEmail field
+  email?: string;          // Added processed email field from backend
   createdAt: string;
   updatedAt: string;
 }
@@ -85,7 +87,7 @@ export default function UpdateOrderStatusPage() {
 
   const fetchOrder = async () => {
     try {
-      const response = await fetch(`https://steth-backend.onrender.com/api/orders/all`);
+      const response = await fetch(`https://steth-backend.onrender.com/api/orders/all?limit=999999`);
       if (!response.ok) {
         throw new Error('Failed to fetch order');
       }
@@ -152,6 +154,23 @@ export default function UpdateOrderStatusPage() {
     }
   };
 
+  // Function to get email with priority logic
+  const getOrderEmail = (order: Order) => {
+    // If backend provides processed email, use it
+    if (order.email !== undefined) {
+      return order.email;
+    }
+    
+    // Fallback: implement priority logic on frontend for older data
+    if (order.customerEmail) {
+      return order.customerEmail;
+    } else if (order.user?.email) {
+      return order.user.email;
+    }
+    
+    return null;
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -179,6 +198,8 @@ export default function UpdateOrderStatusPage() {
       </div>
     );
   }
+
+  const orderEmail = getOrderEmail(order);
 
   return (
     <div className="space-y-6">
@@ -228,7 +249,7 @@ export default function UpdateOrderStatusPage() {
             </div>
             <div>
               <span className="text-sm font-medium text-gray-500">Email:</span>
-              <p className="text-sm">{order.user.email}</p>
+              <p className="text-sm">{orderEmail || "No email provided"}</p>
             </div>
             <div>
               <span className="text-sm font-medium text-gray-500">Phone:</span>
@@ -374,4 +395,4 @@ export default function UpdateOrderStatusPage() {
       </div>
     </div>
   );
-} 
+}
